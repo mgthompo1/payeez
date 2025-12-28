@@ -3,6 +3,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authenticateClientSecret, generateSecureToken } from '../_shared/auth.ts';
 import { routePayment } from '../_shared/router.ts';
 import { stripeAdapter } from '../_shared/adapters/stripe.ts';
+import { adyenAdapter } from '../_shared/adapters/adyen.ts';
+import { authorizenetAdapter } from '../_shared/adapters/authorizenet.ts';
+import { chaseAdapter } from '../_shared/adapters/chase.ts';
+import { nuveiAdapter } from '../_shared/adapters/nuvei.ts';
+import { dlocalAdapter } from '../_shared/adapters/dlocal.ts';
+import { braintreeAdapter } from '../_shared/adapters/braintree.ts';
+import { checkoutcomAdapter } from '../_shared/adapters/checkoutcom.ts';
+import { airwallexAdapter } from '../_shared/adapters/airwallex.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +25,14 @@ interface ConfirmRequest {
 
 const adapters: Record<string, typeof stripeAdapter> = {
   stripe: stripeAdapter,
-  // TODO: Add windcave, adyen, fatzebra, cybersource adapters
+  adyen: adyenAdapter,
+  authorizenet: authorizenetAdapter,
+  chase: chaseAdapter,
+  nuvei: nuveiAdapter,
+  dlocal: dlocalAdapter,
+  braintree: braintreeAdapter,
+  checkoutcom: checkoutcomAdapter,
+  airwallex: airwallexAdapter,
 };
 
 serve(async (req) => {

@@ -2,7 +2,16 @@
 // Core Domain Types
 // ============================================
 
-export type PSPName = 'stripe' | 'windcave' | 'adyen' | 'fatzebra' | 'cybersource';
+export type PSPName =
+  | 'stripe'
+  | 'adyen'
+  | 'authorizenet'
+  | 'chase'
+  | 'nuvei'
+  | 'dlocal'
+  | 'braintree'
+  | 'checkoutcom'
+  | 'airwallex';
 export type VaultProvider = 'basis_theory'; // Add 'vgs' later for redundancy
 export type Environment = 'test' | 'live';
 
