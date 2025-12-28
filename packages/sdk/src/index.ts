@@ -10,7 +10,26 @@ import type {
 // Processor-agnostic payment capture with Basis Theory
 // ============================================
 
-const API_BASE = 'https://api.payeez.co'; // TODO: make configurable
+// Global configuration
+let globalConfig = {
+  apiBase: 'https://api.payeez.co',
+};
+
+/**
+ * Configure the Payeez SDK globally
+ */
+export function configure(options: { apiBase?: string }): void {
+  if (options.apiBase) {
+    globalConfig.apiBase = options.apiBase.replace(/\/$/, ''); // Remove trailing slash
+  }
+}
+
+/**
+ * Get current API base URL
+ */
+function getApiBase(): string {
+  return globalConfig.apiBase;
+}
 
 interface PayeezState {
   config: PayeezConfig | null;
@@ -107,7 +126,7 @@ async function fetchSessionConfig(
   sessionId: string,
   clientSecret: string
 ): Promise<SessionConfig> {
-  const res = await fetch(`${API_BASE}/v1/sessions/${sessionId}/config`, {
+  const res = await fetch(`${getApiBase()}/v1/sessions/${sessionId}/config`, {
     headers: {
       Authorization: `Bearer ${clientSecret}`,
       'Content-Type': 'application/json',
@@ -202,7 +221,7 @@ async function tokenizeAndConfirm(): Promise<Payment> {
 
   // 2. Send token to Payeez API to confirm payment
   const res = await fetch(
-    `${API_BASE}/v1/sessions/${state.sessionConfig.session_id}/confirm`,
+    `${getApiBase()}/v1/sessions/${state.sessionConfig.session_id}/confirm`,
     {
       method: 'POST',
       headers: {
@@ -248,6 +267,7 @@ function normalizeError(err: unknown): PayeezError {
 // ============================================
 
 export const Payeez = {
+  configure,
   mount,
   unmount,
   confirm,
