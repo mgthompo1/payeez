@@ -12,8 +12,38 @@ export type PSPName =
   | 'braintree'
   | 'checkoutcom'
   | 'airwallex';
-export type VaultProvider = 'basis_theory'; // Add 'vgs' later for redundancy
+export type VaultProvider = 'basis_theory' | 'vgs';
 export type Environment = 'test' | 'live';
+
+// Payment method types supported
+export type PaymentMethodType =
+  | 'card'
+  | 'apple_pay'
+  | 'google_pay'
+  | 'bank_account'; // ACH
+
+export interface PaymentMethodConfig {
+  card?: {
+    enabled: boolean;
+    brands?: string[]; // visa, mastercard, amex, etc.
+  };
+  apple_pay?: {
+    enabled: boolean;
+    merchant_id?: string;
+    merchant_name?: string;
+    supported_networks?: string[];
+  };
+  google_pay?: {
+    enabled: boolean;
+    merchant_id?: string;
+    merchant_name?: string;
+    environment?: 'TEST' | 'PRODUCTION';
+  };
+  bank_account?: {
+    enabled: boolean;
+    account_types?: ('checking' | 'savings')[];
+  };
+}
 
 export type PaymentSessionStatus =
   | 'pending'
@@ -21,7 +51,8 @@ export type PaymentSessionStatus =
   | 'processing'
   | 'succeeded'
   | 'failed'
-  | 'canceled';
+  | 'canceled'
+  | 'refunded';
 
 export type PaymentAttemptStatus =
   | 'pending'
@@ -47,6 +78,7 @@ export interface CreatePaymentSessionRequest {
     name?: string;
   };
   capture_method?: CaptureMethod;
+  payment_method_types?: PaymentMethodType[]; // defaults to tenant config
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, string>;
@@ -64,8 +96,20 @@ export interface PaymentSession {
 }
 
 export interface ConfirmPaymentRequest {
+  payment_method_type: PaymentMethodType;
   token_id: string;
   token_provider: VaultProvider;
+  // Apple Pay specific
+  apple_pay_token?: string; // PKPaymentToken from Apple
+  // Google Pay specific
+  google_pay_token?: string; // PaymentData from Google
+  // Bank account specific
+  bank_account?: {
+    routing_number?: string; // tokenized
+    account_number?: string; // tokenized
+    account_type?: 'checking' | 'savings';
+    account_holder_name?: string;
+  };
 }
 
 export interface Payment {
@@ -74,6 +118,7 @@ export interface Payment {
   amount: number;
   currency: string;
   status: PaymentAttemptStatus;
+  payment_method_type: PaymentMethodType;
   psp: PSPName;
   psp_transaction_id?: string;
   card?: {
@@ -81,6 +126,15 @@ export interface Payment {
     last4?: string;
     exp_month?: number;
     exp_year?: number;
+  };
+  wallet?: {
+    type: 'apple_pay' | 'google_pay';
+    card_network?: string;
+  };
+  bank_account?: {
+    bank_name?: string;
+    last4?: string;
+    account_type?: 'checking' | 'savings';
   };
   failure_code?: string;
   failure_message?: string;
@@ -108,8 +162,9 @@ export interface Refund {
 
 export type WebhookEventType =
   | 'payment.authorized'
-  | 'payment.succeeded'
+  | 'payment.captured'
   | 'payment.failed'
+  | 'payment.canceled'
   | 'refund.succeeded'
   | 'refund.failed';
 
@@ -161,14 +216,82 @@ export interface PayeezError {
 // Internal/Admin Types
 // ============================================
 
-export interface RoutingRule {
+// ============================================
+// Orchestration Types
+// ============================================
+
+export interface OrchestrationProfile {
   id: string;
   tenant_id: string;
-  priority: number;
-  conditions: RoutingConditions;
-  psp: PSPName;
-  weight: number; // for load balancing (0-100)
+  name: string;
+  description?: string;
+  environment: Environment;
   is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface TrafficSplitRule {
+  id: string;
+  profile_id: string;
+  tenant_id: string;
+  psp: PSPName;
+  weight: number; // 0-100 percentage
+  conditions?: RoutingConditions;
+  priority: number;
+  is_active: boolean;
+}
+
+export interface RetryRule {
+  id: string;
+  profile_id: string;
+  tenant_id: string;
+  source_psp: PSPName;
+  target_psp: PSPName;
+  retry_order: number; // 1-5
+  failure_codes?: string[]; // null = any failure
+  max_retries: number;
+  retry_delay_ms: number;
+  is_active: boolean;
+}
+
+export interface PSPPriority {
+  id: string;
+  profile_id: string;
+  tenant_id: string;
+  psp: PSPName;
+  priority: number; // 1 = highest
+  is_healthy: boolean;
+  avg_latency_ms?: number;
+  success_rate?: number;
+  is_active: boolean;
+}
+
+export interface VaultConfig {
+  id: string;
+  tenant_id: string;
+  environment: Environment;
+  primary_vault: VaultProvider;
+  bt_public_key?: string;
+  vgs_vault_id?: string;
+  vgs_environment?: 'sandbox' | 'live';
+  failover_vault?: VaultProvider;
+  is_active: boolean;
+}
+
+export interface RoutingDecision {
+  id: string;
+  tenant_id: string;
+  session_id: string;
+  selected_psp: PSPName;
+  selection_reason: 'weighted_random' | 'retry' | 'failover' | 'condition_match';
+  candidates: Array<{ psp: PSPName; weight: number }>;
+  is_retry: boolean;
+  retry_number?: number;
+  previous_psp?: PSPName;
+  previous_failure_code?: string;
+  outcome?: 'pending' | 'success' | 'failure';
+  created_at: string;
 }
 
 export interface RoutingConditions {
@@ -177,6 +300,7 @@ export interface RoutingConditions {
   amount_lte?: number;
   card_brand?: string;
   country?: string;
+  payment_method?: PaymentMethodType;
 }
 
 export interface PSPCredentials {
@@ -184,6 +308,17 @@ export interface PSPCredentials {
   environment: Environment;
   // Actual credential fields vary by PSP - stored encrypted
   [key: string]: unknown;
+}
+
+// Legacy RoutingRule for backwards compatibility
+export interface RoutingRule {
+  id: string;
+  tenant_id: string;
+  priority: number;
+  conditions: RoutingConditions;
+  psp: PSPName;
+  weight: number;
+  is_active: boolean;
 }
 
 // ============================================
@@ -196,6 +331,31 @@ export interface SessionConfig {
   amount: number;
   currency: string;
   capture_provider: VaultProvider;
-  basis_theory_key?: string; // public key for Basis Theory Elements
+  // Basis Theory configuration
+  basis_theory_key?: string;
+  bt_reactor_id?: string;
+  // VGS configuration
+  vgs_vault_id?: string;
+  vgs_environment?: 'sandbox' | 'live';
   fallback_url?: string;
+  // Payment methods available for this session
+  payment_methods: PaymentMethodType[];
+  // Apple Pay configuration (if enabled)
+  apple_pay?: {
+    merchant_id: string;
+    merchant_name: string;
+    country_code: string;
+    supported_networks: string[];
+  };
+  // Google Pay configuration (if enabled)
+  google_pay?: {
+    merchant_id: string;
+    merchant_name: string;
+    environment: 'TEST' | 'PRODUCTION';
+    allowed_card_networks: string[];
+  };
+  // Bank account configuration (if enabled)
+  bank_account?: {
+    account_types: ('checking' | 'savings')[];
+  };
 }

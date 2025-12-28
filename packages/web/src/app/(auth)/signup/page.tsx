@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Loader2, ArrowRight, Check } from 'lucide-react'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -41,70 +41,169 @@ export default function SignupPage() {
     router.refresh()
   }
 
+  const features = [
+    'Multi-processor payment orchestration',
+    'Enterprise-grade resilience',
+    '3D Secure authentication',
+    'Network tokenization',
+    'PCI DSS compliant',
+  ]
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-          <CardDescription>
-            Enter your details to get started with Payeez
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSignup}>
-          <CardContent className="space-y-4">
-            {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
-                {error}
+    <div className="min-h-screen flex bg-[#0a0a0a]">
+      {/* Left side - Form */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        {/* Background gradient orbs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#19d1c3]/20 rounded-full blur-[100px]" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#c8ff5a]/20 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="relative w-full max-w-md">
+          {/* Logo */}
+          <div className="flex justify-center mb-8 lg:hidden">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a] flex items-center justify-center">
+                <span className="text-white font-bold text-lg">P</span>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+              <span className="text-2xl font-bold text-white">Payeez</span>
+            </Link>
+          </div>
+
+          <div className="rounded-2xl bg-[#111] border border-white/10 p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold text-white">Create your account</h1>
+              <p className="text-gray-500 mt-2">Start accepting payments in minutes</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+
+            <form onSubmit={handleSignup} className="space-y-6">
+              {error && (
+                <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-gray-300">Full name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-300">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90 text-white font-medium"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  <>
+                    Create account
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-gray-500">
+                Already have an account?{' '}
+                <Link href="/login" className="text-[#19d1c3] hover:text-[#4cc3ff] font-medium">
+                  Sign in
+                </Link>
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="At least 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
+          </div>
+
+          <p className="text-center text-gray-600 text-sm mt-8">
+            By signing up, you agree to our{' '}
+            <Link href="/terms" className="text-gray-400 hover:text-white">Terms of Service</Link>
+            {' '}and{' '}
+            <Link href="/privacy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Right side - Features (hidden on mobile) */}
+      <div className="hidden lg:flex flex-1 items-center justify-center bg-gradient-to-br from-[#19d1c3]/10 to-[#c8ff5a]/10 border-l border-white/10 p-8">
+        <div className="max-w-md">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 mb-12">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a] flex items-center justify-center">
+              <span className="text-white font-bold text-xl">P</span>
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Create account'}
-            </Button>
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 hover:underline">
-                Sign in
-              </Link>
+            <span className="text-3xl font-bold text-white">Payeez</span>
+          </Link>
+
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Payment orchestration for modern businesses
+          </h2>
+          <p className="text-gray-400 text-lg mb-8">
+            Connect to multiple payment processors, optimize authorization rates, and ensure your payments never fail.
+          </p>
+
+          <div className="space-y-4">
+            {features.map((feature, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <Check className="h-4 w-4 text-green-400" />
+                </div>
+                <span className="text-gray-300">{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 p-6 rounded-xl bg-white/5 border border-white/10">
+            <p className="text-gray-400 italic">
+              &ldquo;Payeez has transformed how we handle payments. The resilience features mean we never miss a transaction.&rdquo;
             </p>
-          </CardFooter>
-        </form>
-      </Card>
+            <div className="mt-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a]" />
+              <div>
+                <p className="text-white font-medium">Sarah Chen</p>
+                <p className="text-sm text-gray-500">CTO, TechCorp</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

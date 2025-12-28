@@ -8,7 +8,10 @@ import {
   Key,
   Webhook,
   LogOut,
-  Menu
+  BookOpen,
+  GitBranch,
+  ChevronRight,
+  Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -23,8 +26,10 @@ import {
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCard },
+  { name: 'Orchestration', href: '/dashboard/orchestration', icon: GitBranch },
   { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
   { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
+  { name: 'Docs', href: '/dashboard/docs', icon: BookOpen },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
@@ -43,71 +48,83 @@ export default async function DashboardLayout({
   const initials = user.email?.slice(0, 2).toUpperCase() || 'U'
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--brand-ink)] text-white">
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200">
-        <div className="flex h-16 items-center px-6 border-b">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">P</span>
+      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-[#0f1621] border-r border-white/10">
+        <div className="flex h-16 items-center px-6 border-b border-white/10">
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a] flex items-center justify-center">
+              <span className="text-[var(--brand-ink)] font-semibold text-xs">PZ</span>
             </div>
-            <span className="font-semibold text-lg">Payeez</span>
+            <div>
+              <div className="text-xs uppercase tracking-[0.3em] text-[#8ba3b7]">Payeez</div>
+              <div className="text-[10px] text-[#9bb0c2]">Control plane</div>
+            </div>
           </Link>
         </div>
+
+        {/* Environment Badge */}
+        <div className="px-4 py-3 border-b border-white/10">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+            <Zap className="h-4 w-4 text-[#c8ff5a]" />
+            <span className="text-sm font-medium text-[#c8ff5a]">Test Mode</span>
+          </div>
+        </div>
+
         <nav className="flex flex-col gap-1 p-4">
           {navigation.map((item) => (
             <Link
               key={item.name}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
-            >
+            className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-[#9bb0c2] rounded-lg hover:bg-white/5 hover:text-white transition-all"
+          >
               <item.icon className="h-5 w-5" />
               {item.name}
+              <ChevronRight className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </Link>
           ))}
         </nav>
+
+        {/* Bottom section */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <Avatar className="h-9 w-9 bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a]">
+              <AvatarFallback className="bg-transparent text-[#081014] text-sm">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user.email}</p>
+              <p className="text-xs text-[#8ba3b7]">Sandbox plan</p>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-[#9bb0c2] hover:text-white">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-[#1a1a1a] border-white/10">
+                <DropdownMenuItem asChild className="text-gray-300 focus:bg-white/10 focus:text-white">
+                  <Link href="/dashboard/settings">Settings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <form action="/auth/signout" method="POST">
+                  <DropdownMenuItem asChild className="text-gray-300 focus:bg-white/10 focus:text-white">
+                    <button type="submit" className="w-full flex items-center">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </button>
+                  </DropdownMenuItem>
+                </form>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
       <div className="pl-64">
-        {/* Top bar */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="lg:hidden">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="flex flex-col space-y-1 p-2">
-                <p className="text-sm font-medium">{user.email}</p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">Settings</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <form action="/auth/signout" method="POST">
-                <DropdownMenuItem asChild>
-                  <button type="submit" className="w-full flex items-center">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </button>
-                </DropdownMenuItem>
-              </form>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
-
-        {/* Page content */}
-        <main className="p-6">
+        <main className="p-8">
           {children}
         </main>
       </div>

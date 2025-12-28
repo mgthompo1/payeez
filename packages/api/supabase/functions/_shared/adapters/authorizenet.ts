@@ -18,7 +18,7 @@ export interface AuthorizeRequest {
 export interface AuthorizeResponse {
   success: boolean;
   transactionId: string;
-  status: 'authorized' | 'captured' | 'failed';
+  status: 'authorized' | 'captured' | 'failed' | 'refunded' | 'canceled';
   card?: {
     brand?: string;
     last4?: string;
@@ -226,7 +226,52 @@ export const authorizenetAdapter = {
     return {
       success: isSuccess,
       transactionId: txnResponse?.transId || '',
-      status: isSuccess ? 'captured' : 'failed',
+      status: isSuccess ? 'refunded' : 'failed',
+      failureCode: txnResponse?.errors?.[0]?.errorCode,
+      failureMessage: txnResponse?.errors?.[0]?.errorText,
+      rawResponse: result,
+    };
+  },
+
+  async void(
+    transactionId: string,
+    credentials: {
+      api_login_id: string;
+      transaction_key: string;
+      environment?: 'test' | 'live';
+    }
+  ): Promise<AuthorizeResponse> {
+    const baseUrl = credentials.environment === 'live'
+      ? 'https://api.authorize.net/xml/v1/request.api'
+      : 'https://apitest.authorize.net/xml/v1/request.api';
+
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        createTransactionRequest: {
+          merchantAuthentication: {
+            name: credentials.api_login_id,
+            transactionKey: credentials.transaction_key,
+          },
+          transactionRequest: {
+            transactionType: 'voidTransaction',
+            refTransId: transactionId,
+          },
+        },
+      }),
+    });
+
+    const result = await response.json();
+    const txnResponse = result.transactionResponse;
+    const isSuccess = txnResponse?.responseCode === '1';
+
+    return {
+      success: isSuccess,
+      transactionId: txnResponse?.transId || transactionId,
+      status: isSuccess ? 'canceled' : 'failed',
       failureCode: txnResponse?.errors?.[0]?.errorCode,
       failureMessage: txnResponse?.errors?.[0]?.errorText,
       rawResponse: result,
@@ -260,9 +305,9 @@ export const authorizenetAdapter = {
 
     const typeMap: Record<string, string> = {
       'net.authorize.payment.authorization.created': 'payment.authorized',
-      'net.authorize.payment.authcapture.created': 'payment.succeeded',
-      'net.authorize.payment.capture.created': 'payment.succeeded',
-      'net.authorize.payment.priorAuthCapture.created': 'payment.succeeded',
+      'net.authorize.payment.authcapture.created': 'payment.captured',
+      'net.authorize.payment.capture.created': 'payment.captured',
+      'net.authorize.payment.priorAuthCapture.created': 'payment.captured',
       'net.authorize.payment.void.created': 'payment.failed',
       'net.authorize.payment.refund.created': 'refund.succeeded',
       'net.authorize.payment.fraud.held': 'payment.failed',

@@ -233,9 +233,9 @@ export const braintreeAdapter = {
     const transaction = payload.transaction || {};
 
     const typeMap: Record<string, string> = {
-      'transaction_settled': 'payment.succeeded',
+      'transaction_settled': 'payment.captured',
       'transaction_settlement_declined': 'payment.failed',
-      'transaction_disbursed': 'payment.succeeded',
+      'transaction_disbursed': 'payment.captured',
       'transaction_authorized': 'payment.authorized',
       'transaction_voided': 'payment.failed',
       'refund': 'refund.succeeded',

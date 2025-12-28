@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { decryptJson } from './crypto.ts';
 
 export interface RouteDecision {
   psp: string;
@@ -83,13 +84,11 @@ export async function routePayment(
     return null;
   }
 
-  // TODO: Decrypt credentials using KMS
-  // For now, parse as JSON (in production, decrypt first)
   let credentials: Record<string, string>;
   try {
-    credentials = JSON.parse(credData.credentials_encrypted);
-  } catch {
-    console.error('Failed to parse PSP credentials');
+    credentials = (await decryptJson(credData.credentials_encrypted)) as Record<string, string>;
+  } catch (error) {
+    console.error('Failed to decrypt PSP credentials:', error);
     return null;
   }
 

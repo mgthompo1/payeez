@@ -244,7 +244,7 @@ export const dlocalAdapter = {
 
     const typeMap: Record<string, string> = {
       AUTHORIZED: 'payment.authorized',
-      PAID: 'payment.succeeded',
+      PAID: 'payment.captured',
       REJECTED: 'payment.failed',
       CANCELLED: 'payment.failed',
       REFUNDED: 'refund.succeeded',

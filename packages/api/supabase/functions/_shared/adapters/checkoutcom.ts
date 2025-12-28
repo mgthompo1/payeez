@@ -227,8 +227,8 @@ export const checkoutcomAdapter = {
     const data = payload.data || {};
 
     const typeMap: Record<string, string> = {
-      'payment_approved': 'payment.succeeded',
-      'payment_captured': 'payment.succeeded',
+      'payment_approved': 'payment.captured',
+      'payment_captured': 'payment.captured',
       'payment_declined': 'payment.failed',
       'payment_voided': 'payment.failed',
       'payment_refunded': 'refund.succeeded',

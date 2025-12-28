@@ -6,7 +6,7 @@ Processor-agnostic payment orchestration platform built on Basis Theory.
 
 Payeez provides a unified payment API that:
 - **Captures cards securely** via Basis Theory (no PCI scope for you)
-- **Routes payments** to multiple PSPs (Stripe, Windcave, Adyen, Fat Zebra, Cybersource)
+- **Routes payments** to multiple PSPs (Stripe, Adyen, Authorize.net, Chase, Nuvei, dLocal, Braintree, Checkout.com, Airwallex)
 - **Provides fallback** if capture fails (redirect to PSP hosted checkout)
 - **Normalizes webhooks** across all PSPs
 
@@ -29,8 +29,8 @@ Payeez provides a unified payment API that:
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  PAYEEZ API (Supabase Edge Functions)                           │
-│  ├─ POST /v1/payment-sessions                                   │
-│  ├─ POST /v1/sessions/{id}/confirm                              │
+│  ├─ POST /create-session                                        │
+│  ├─ POST /confirm-payment/{id}                                  │
 │  ├─ Router (picks PSP based on rules)                           │
 │  └─ PSP Adapters                                                │
 └─────────────────────────────────────────────────────────────────┘
@@ -38,7 +38,7 @@ Payeez provides a unified payment API that:
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  PSPs                                                           │
-│  Stripe │ Windcave │ Adyen │ Fat Zebra │ Cybersource            │
+│  Stripe │ Adyen │ Authorize.net │ Chase │ Nuvei │ dLocal │ Braintree │ Checkout.com │ Airwallex │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,7 +84,7 @@ npm run dev
 ### Server-side: Create a payment session
 
 ```javascript
-const response = await fetch('https://api.payeez.co/v1/payment-sessions', {
+const response = await fetch('https://api.payeez.co/functions/v1/create-session', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer sk_test_xxx',
@@ -132,12 +132,12 @@ VALUES (
   'your-tenant-id',
   10,
   '{"currency": "NZD", "amount_gte": 10000}',
-  'windcave',
+  'adyen',
   100
 );
 ```
 
-This routes NZD payments over $100 to Windcave.
+This routes NZD payments over $100 to Adyen.
 
 ## Webhooks
 
@@ -146,7 +146,7 @@ Payeez normalizes webhooks from all PSPs into a common format:
 ```json
 {
   "id": "evt_xxx",
-  "type": "payment.succeeded",
+  "type": "payment.captured",
   "data": {
     "payment_id": "py_xxx",
     "session_id": "ps_xxx",
@@ -159,7 +159,7 @@ Payeez normalizes webhooks from all PSPs into a common format:
 
 Event types:
 - `payment.authorized`
-- `payment.succeeded`
+- `payment.captured`
 - `payment.failed`
 - `refund.succeeded`
 - `refund.failed`

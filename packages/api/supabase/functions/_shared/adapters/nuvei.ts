@@ -290,7 +290,7 @@ export const nuveiAdapter = {
 
     let type: string;
     if (status === 'APPROVED') {
-      type = payload.transactionType === 'Sale' ? 'payment.succeeded' : 'payment.authorized';
+      type = payload.transactionType === 'Sale' ? 'payment.captured' : 'payment.authorized';
     } else if (status === 'DECLINED' || status === 'ERROR') {
       type = 'payment.failed';
     } else if (payload.transactionType === 'Credit') {

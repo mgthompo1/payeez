@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Loader2, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -38,23 +38,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
-          <CardDescription>
-            Enter your email and password to access your dashboard
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+      {/* Background gradient orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#19d1c3]/20 rounded-full blur-[100px]" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#c8ff5a]/20 rounded-full blur-[100px]" />
+      </div>
+
+      <div className="relative w-full max-w-md mx-4">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a] flex items-center justify-center">
+              <span className="text-white font-bold text-lg">P</span>
+            </div>
+            <span className="text-2xl font-bold text-white">Payeez</span>
+          </Link>
+        </div>
+
+        <div className="rounded-2xl bg-[#111] border border-white/10 p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+            <p className="text-gray-500 mt-2">Sign in to your account to continue</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
             {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+              <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
                 {error}
               </div>
             )}
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-gray-300">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -62,32 +78,64 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <Link href="/forgot-password" className="text-sm text-[#19d1c3] hover:text-[#4cc3ff]">
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
               />
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90 text-white font-medium"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </>
+              )}
             </Button>
-            <p className="text-sm text-gray-600">
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-500">
               Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-blue-600 hover:underline">
+              <Link href="/signup" className="text-[#19d1c3] hover:text-[#4cc3ff] font-medium">
                 Sign up
               </Link>
             </p>
-          </CardFooter>
-        </form>
-      </Card>
+          </div>
+        </div>
+
+        <p className="text-center text-gray-600 text-sm mt-8">
+          By signing in, you agree to our{' '}
+          <Link href="/terms" className="text-gray-400 hover:text-white">Terms of Service</Link>
+          {' '}and{' '}
+          <Link href="/privacy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
+        </p>
+      </div>
     </div>
   )
 }

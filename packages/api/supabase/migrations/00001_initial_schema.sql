@@ -61,7 +61,7 @@ create table api_keys (
 create table psp_credentials (
   id uuid primary key default uuid_generate_v4(),
   tenant_id uuid references tenants(id) on delete cascade not null,
-  psp text not null check (psp in ('stripe', 'windcave', 'adyen', 'fatzebra', 'cybersource')),
+  psp text not null check (psp in ('stripe', 'adyen', 'authorizenet', 'chase', 'nuvei', 'dlocal', 'braintree', 'checkoutcom', 'airwallex')),
   environment text not null check (environment in ('test', 'live')),
   credentials_encrypted text not null, -- JSON blob encrypted with KMS
   is_active boolean default true,
@@ -79,7 +79,7 @@ create table routing_rules (
   tenant_id uuid references tenants(id) on delete cascade not null,
   priority int not null default 0, -- higher = checked first
   conditions jsonb not null default '{}', -- {currency: "NZD", amount_gte: 10000}
-  psp text not null check (psp in ('stripe', 'windcave', 'adyen', 'fatzebra', 'cybersource')),
+  psp text not null check (psp in ('stripe', 'adyen', 'authorizenet', 'chase', 'nuvei', 'dlocal', 'braintree', 'checkoutcom', 'airwallex')),
   weight int default 100 check (weight >= 0 and weight <= 100), -- for load balancing
   is_active boolean default true,
   created_at timestamptz default now(),
@@ -138,7 +138,7 @@ create table payment_attempts (
   session_id uuid references payment_sessions(id) on delete cascade not null,
   tenant_id uuid references tenants(id) on delete cascade not null,
   token_id uuid references tokens(id),
-  psp text not null check (psp in ('stripe', 'windcave', 'adyen', 'fatzebra', 'cybersource')),
+  psp text not null check (psp in ('stripe', 'adyen', 'authorizenet', 'chase', 'nuvei', 'dlocal', 'braintree', 'checkoutcom', 'airwallex')),
   psp_transaction_id text, -- PSP's transaction/payment ID
   idempotency_key text not null,
   amount int not null,
@@ -179,7 +179,7 @@ create table merchant_webhooks (
   id uuid primary key default uuid_generate_v4(),
   tenant_id uuid references tenants(id) on delete cascade not null,
   url text not null,
-  events text[] not null default array['payment.succeeded', 'payment.failed', 'refund.succeeded'],
+  events text[] not null default array['payment.captured', 'payment.failed', 'refund.succeeded'],
   is_active boolean default true,
   created_at timestamptz default now()
 );

@@ -18,7 +18,7 @@ export interface AuthorizeRequest {
 export interface AuthorizeResponse {
   success: boolean;
   transactionId: string;
-  status: 'authorized' | 'captured' | 'failed';
+  status: 'authorized' | 'captured' | 'failed' | 'refunded' | 'canceled';
   card?: {
     brand?: string;
     last4?: string;
@@ -195,7 +195,44 @@ export const adyenAdapter = {
     return {
       success: result.status === 'received',
       transactionId: result.pspReference || '',
-      status: result.status === 'received' ? 'captured' : 'failed',
+      status: result.status === 'received' ? 'refunded' : 'failed',
+      failureCode: result.errorCode,
+      failureMessage: result.message,
+      rawResponse: result,
+    };
+  },
+
+  async void(
+    transactionId: string,
+    credentials: {
+      api_key: string;
+      merchant_account: string;
+      environment?: 'test' | 'live';
+    },
+    idempotencyKey: string
+  ): Promise<AuthorizeResponse> {
+    const baseUrl = credentials.environment === 'live'
+      ? 'https://checkout-live.adyen.com/v71'
+      : 'https://checkout-test.adyen.com/v71';
+
+    const response = await fetch(`${baseUrl}/payments/${transactionId}/cancels`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': credentials.api_key,
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({
+        merchantAccount: credentials.merchant_account,
+      }),
+    });
+
+    const result = await response.json();
+
+    return {
+      success: result.status === 'received',
+      transactionId: result.pspReference || transactionId,
+      status: result.status === 'received' ? 'canceled' : 'failed',
       failureCode: result.errorCode,
       failureMessage: result.message,
       rawResponse: result,
@@ -236,7 +273,7 @@ export const adyenAdapter = {
 
     const typeMap: Record<string, string> = {
       AUTHORISATION: item?.success === 'true' ? 'payment.authorized' : 'payment.failed',
-      CAPTURE: 'payment.succeeded',
+      CAPTURE: 'payment.captured',
       CAPTURE_FAILED: 'payment.failed',
       REFUND: 'refund.succeeded',
       REFUND_FAILED: 'refund.failed',

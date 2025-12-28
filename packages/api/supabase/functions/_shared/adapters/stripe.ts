@@ -8,12 +8,28 @@ export interface AuthorizeRequest {
   capture: boolean;
   customerEmail?: string;
   metadata?: Record<string, string>;
+  paymentMethodType?: 'card' | 'apple_pay' | 'google_pay' | 'bank_account';
+  bankAccount?: {
+    account_holder_name?: string;
+    account_type?: 'checking' | 'savings';
+  };
+  // VGS support
+  tokenProvider?: 'basis_theory' | 'vgs';
+  vgsConfig?: {
+    vaultId: string;
+    credentials: string;
+  };
+  vgsData?: {
+    card_number: string;
+    card_expiry: string;
+    card_cvc: string;
+  };
 }
 
 export interface AuthorizeResponse {
   success: boolean;
   transactionId: string;
-  status: 'authorized' | 'captured' | 'failed';
+  status: 'authorized' | 'captured' | 'failed' | 'refunded' | 'canceled';
   card?: {
     brand?: string;
     last4?: string;
@@ -35,22 +51,45 @@ export const stripeAdapter = {
   async authorize(
     req: AuthorizeRequest,
     credentials: { secret_key: string },
-    basisTheoryApiKey: string
+    vaultApiKey: string
   ): Promise<AuthorizeResponse> {
-    // Use Basis Theory's proxy to create a Stripe PaymentMethod
-    // This keeps us out of PCI scope - BT handles the card data
-    const proxyResponse = await fetch('https://api.basistheory.com/proxy', {
-      method: 'POST',
-      headers: {
-        'BT-API-KEY': basisTheoryApiKey,
-        'BT-PROXY-URL': 'https://api.stripe.com/v1/payment_methods',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        type: 'card',
-        'card[token]': `{{${req.tokenId}}}`, // BT token interpolation
-      }),
-    });
+    let proxyResponse: Response;
+
+    // Use appropriate vault proxy based on token provider
+    if (req.tokenProvider === 'vgs' && req.vgsConfig && req.vgsData) {
+      // VGS proxy - forwards through VGS to reveal card data
+      const vgsBaseUrl = `https://${req.vgsConfig.vaultId}.sandbox.verygoodproxy.com`;
+      proxyResponse = await fetch(`${vgsBaseUrl}/proxy`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${req.vgsConfig.credentials}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-VGS-Target-URL': 'https://api.stripe.com/v1/payment_methods',
+          'X-Stripe-Auth': `Bearer ${credentials.secret_key}`,
+        },
+        body: new URLSearchParams({
+          type: 'card',
+          'card[number]': req.vgsData.card_number, // VGS alias - will be revealed
+          'card[exp_month]': req.vgsData.card_expiry.split('/')[0]?.trim() || '',
+          'card[exp_year]': req.vgsData.card_expiry.split('/')[1]?.trim() || '',
+          'card[cvc]': req.vgsData.card_cvc,
+        }),
+      });
+    } else {
+      // Basis Theory proxy - default
+      proxyResponse = await fetch('https://api.basistheory.com/proxy', {
+        method: 'POST',
+        headers: {
+          'BT-API-KEY': vaultApiKey,
+          'BT-PROXY-URL': 'https://api.stripe.com/v1/payment_methods',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          type: 'card',
+          'card[token]': `{{${req.tokenId}}}`, // BT token interpolation
+        }),
+      });
+    }
 
     if (!proxyResponse.ok) {
       const error = await proxyResponse.json();
@@ -176,13 +215,43 @@ export const stripeAdapter = {
       return {
         success: refund.status === 'succeeded',
         transactionId: refund.id,
-        status: refund.status === 'succeeded' ? 'captured' : 'failed',
+        status: refund.status === 'succeeded' ? 'refunded' : 'failed',
         rawResponse: refund,
       };
     } catch (error: any) {
       return {
         success: false,
         transactionId: '',
+        status: 'failed',
+        failureCode: error.code,
+        failureMessage: error.message,
+        rawResponse: error,
+      };
+    }
+  },
+
+  async void(
+    transactionId: string,
+    credentials: { secret_key: string }
+  ): Promise<AuthorizeResponse> {
+    const stripe = new Stripe(credentials.secret_key, {
+      apiVersion: '2023-10-16',
+    });
+
+    try {
+      const paymentIntent = await stripe.paymentIntents.cancel(transactionId);
+      const canceled = paymentIntent.status === 'canceled';
+
+      return {
+        success: canceled,
+        transactionId: paymentIntent.id,
+        status: canceled ? 'canceled' : 'failed',
+        rawResponse: paymentIntent,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        transactionId,
         status: 'failed',
         failureCode: error.code,
         failureMessage: error.message,

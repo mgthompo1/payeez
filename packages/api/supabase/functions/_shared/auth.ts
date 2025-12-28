@@ -3,11 +3,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 export interface AuthResult {
   tenantId: string;
   environment: 'test' | 'live';
+  apiKeyId?: string;
 }
+
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-idempotency-key, idempotency-key',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+};
 
 /**
  * Authenticate API request using API key
- * Returns tenant ID and environment if valid
+ * Uses the validate_api_key database function for secure bcrypt verification
  */
 export async function authenticateApiKey(
   authHeader: string | null,
@@ -19,52 +26,68 @@ export async function authenticateApiKey(
   }
 
   const apiKey = authHeader.slice(7);
-  const keyPrefix = apiKey.slice(0, 8); // "sk_test_" or "sk_live_"
 
-  // Determine environment from prefix
-  let environment: 'test' | 'live';
-  if (keyPrefix === 'sk_test_') {
-    environment = 'test';
-  } else if (keyPrefix === 'sk_live_') {
-    environment = 'live';
-  } else {
+  // Validate key format
+  if (!apiKey.startsWith('sk_test_') && !apiKey.startsWith('sk_live_')) {
     return null;
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Look up API key by prefix, then verify hash
-  const { data: keys, error } = await supabase
-    .from('api_keys')
-    .select('id, tenant_id, key_hash')
-    .eq('key_prefix', keyPrefix)
-    .eq('environment', environment)
-    .is('revoked_at', null);
+  // Use the database function to validate API key (handles bcrypt comparison)
+  const { data, error } = await supabase.rpc('validate_api_key', {
+    p_full_key: apiKey,
+  });
 
-  if (error || !keys?.length) {
+  if (error) {
+    console.error('API key validation error:', error);
     return null;
   }
 
-  // For now, simple comparison (in production, use bcrypt)
-  // TODO: Implement proper bcrypt verification
-  for (const key of keys) {
-    // Placeholder: compare full key hash
-    // In production: await bcrypt.compare(apiKey, key.key_hash)
-    if (key.key_hash === apiKey) {
-      // Update last_used_at
-      await supabase
-        .from('api_keys')
-        .update({ last_used_at: new Date().toISOString() })
-        .eq('id', key.id);
+  const result = data?.[0];
 
-      return {
-        tenantId: key.tenant_id,
-        environment,
-      };
-    }
+  if (!result?.is_valid) {
+    return null;
   }
 
-  return null;
+  return {
+    tenantId: result.tenant_id,
+    environment: result.environment as 'test' | 'live',
+  };
+}
+
+/**
+ * Create error response
+ */
+export function errorResponse(
+  code: string,
+  message: string,
+  status: number,
+  details?: unknown
+): Response {
+  return new Response(
+    JSON.stringify({
+      error: {
+        code,
+        message,
+        ...(details ? { details } : {}),
+      },
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    }
+  );
+}
+
+/**
+ * Create success response
+ */
+export function successResponse(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 /**

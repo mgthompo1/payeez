@@ -2,36 +2,14 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Search, Download, Filter } from 'lucide-react'
-
-// Mock data for initial display
-const mockTransactions = [
-  {
-    id: 'py_1234567890',
-    amount: 4990,
-    currency: 'USD',
-    status: 'succeeded',
-    psp: 'stripe',
-    customer_email: 'customer@example.com',
-    created_at: new Date().toISOString(),
-  },
-]
+import { Search, Download, Filter, CreditCard, RefreshCw } from 'lucide-react'
 
 export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const [transactions, setTransactions] = useState<typeof mockTransactions>([])
+  const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
   const searchTransactions = async () => {
@@ -89,103 +67,120 @@ export default function TransactionsPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      succeeded: 'default',
-      captured: 'default',
-      authorized: 'secondary',
-      pending: 'outline',
-      failed: 'destructive',
+    const styles: Record<string, string> = {
+      succeeded: 'bg-green-500/10 text-green-400 border-green-500/20',
+      captured: 'bg-green-500/10 text-green-400 border-green-500/20',
+      authorized: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+      pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+      failed: 'bg-red-500/10 text-red-400 border-red-500/20',
     }
-    return <Badge variant={variants[status] || 'outline'}>{status}</Badge>
+    return <Badge className={styles[status] || 'bg-gray-500/10 text-gray-400'}>{status}</Badge>
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Transactions</h1>
-          <p className="text-gray-500">View and search payment transactions</p>
+          <h1 className="text-2xl font-bold text-white">Transactions</h1>
+          <p className="text-gray-500 mt-1">View and search payment transactions</p>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" className="border-white/10 text-gray-300 hover:bg-white/5">
           <Download className="h-4 w-4 mr-2" />
           Export
         </Button>
       </div>
 
       {/* Search and Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                placeholder="Search by transaction ID, email, or reference..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                onKeyDown={(e) => e.key === 'Enter' && searchTransactions()}
-              />
-            </div>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
-            <Button onClick={searchTransactions} disabled={loading}>
-              {loading ? 'Searching...' : 'Search'}
-            </Button>
+      <div className="rounded-2xl bg-[#111] border border-white/10 p-6">
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Input
+              placeholder="Search by transaction ID, email, or reference..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500"
+              onKeyDown={(e) => e.key === 'Enter' && searchTransactions()}
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Button variant="outline" className="border-white/10 text-gray-300 hover:bg-white/5">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+          <Button
+            onClick={searchTransactions}
+            disabled={loading}
+            className="bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              'Search'
+            )}
+          </Button>
+        </div>
+      </div>
 
       {/* Transactions Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>
-            {transactions.length} transactions found
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>PSP</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <div className="rounded-2xl bg-[#111] border border-white/10 overflow-hidden">
+        <div className="p-6 border-b border-white/10">
+          <h2 className="text-lg font-semibold text-white">Recent Transactions</h2>
+          <p className="text-sm text-gray-500">{transactions.length} transactions found</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/10">
+                <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">Processor</th>
+                <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              </tr>
+            </thead>
+            <tbody>
               {transactions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                    No transactions found. Use the search to find specific transactions.
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={6} className="py-12">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center mb-4">
+                        <CreditCard className="h-6 w-6 text-gray-500" />
+                      </div>
+                      <p className="text-gray-400 mb-2">No transactions found</p>
+                      <p className="text-sm text-gray-500">Use the search to find specific transactions</p>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 transactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell className="font-mono text-sm">
-                      {transaction.id.slice(0, 8)}...
-                    </TableCell>
-                    <TableCell>
-                      {formatAmount(transaction.amount, transaction.currency)}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{transaction.psp}</Badge>
-                    </TableCell>
-                    <TableCell>{transaction.customer_email || '-'}</TableCell>
-                    <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                  </TableRow>
+                  <tr key={transaction.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="py-4 px-6">
+                      <code className="text-sm text-[#19d1c3]">{transaction.id.slice(0, 8)}...</code>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-white font-medium">{formatAmount(transaction.amount, transaction.currency)}</span>
+                    </td>
+                    <td className="py-4 px-6">{getStatusBadge(transaction.status)}</td>
+                    <td className="py-4 px-6">
+                      <Badge className="bg-white/5 text-gray-300 border-white/10">{transaction.psp}</Badge>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-gray-400">{transaction.customer_email || '-'}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-gray-500 text-sm">{formatDate(transaction.created_at)}</span>
+                    </td>
+                  </tr>
                 ))
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }

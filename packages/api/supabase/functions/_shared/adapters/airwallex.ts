@@ -299,7 +299,7 @@ export const airwallexAdapter = {
     const data = payload.data || {};
 
     const typeMap: Record<string, string> = {
-      'payment_intent.succeeded': 'payment.succeeded',
+      'payment_intent.succeeded': 'payment.captured',
       'payment_intent.requires_capture': 'payment.authorized',
       'payment_intent.failed': 'payment.failed',
       'payment_intent.cancelled': 'payment.failed',

@@ -1,0 +1,945 @@
+openapi: 3.1.0
+info:
+  title: Payeez API
+  description: |
+    Processor-agnostic payment orchestration API with Basis Theory for PCI-free tokenization.
+
+    ## Authentication
+
+    All API requests require authentication using an API key in the `Authorization` header:
+    ```
+    Authorization: Bearer sk_test_your_api_key
+    ```
+
+    ## Payment Methods
+
+    Payeez supports multiple payment methods:
+    - **Card**: Credit and debit cards tokenized via Basis Theory
+    - **Apple Pay**: Native Apple Pay integration
+    - **Google Pay**: Native Google Pay integration
+    - **Bank Account (ACH)**: US bank account payments
+
+    ## Environments
+
+    - **Test**: Use `sk_test_` prefixed keys
+    - **Live**: Use `sk_live_` prefixed keys
+
+  version: 1.0.0
+  contact:
+    name: Payeez Support
+    url: https://payeez.co/support
+
+servers:
+  - url: https://api.payeez.co/functions/v1
+    description: Production API
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /create-session:
+    post:
+      summary: Create Payment Session
+      description: |
+        Create a new payment session to collect payment from a customer.
+        Returns a session ID and client secret for use with the frontend SDK.
+      operationId: createSession
+      tags:
+        - Sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            examples:
+              basic:
+                summary: Basic session
+                value:
+                  amount: 4990
+                  currency: USD
+              withCustomer:
+                summary: With customer details
+                value:
+                  amount: 4990
+                  currency: USD
+                  customer:
+                    email: customer@example.com
+                    name: John Doe
+                  external_id: order_12345
+              withPaymentMethods:
+                summary: Specific payment methods
+                value:
+                  amount: 4990
+                  currency: USD
+                  payment_method_types:
+                    - card
+                    - apple_pay
+                    - google_pay
+      responses:
+        '200':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSession'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /get-session-config/{session_id}:
+    get:
+      summary: Get Session Config
+      description: |
+        Retrieve configuration for the frontend SDK.
+        Called by the SDK using the client secret.
+      operationId: getSessionConfig
+      tags:
+        - Sessions
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - ClientSecretAuth: []
+      responses:
+        '200':
+          description: Session config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionConfig'
+        '400':
+          description: Session expired or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /confirm-payment/{session_id}:
+    post:
+      summary: Confirm Payment
+      description: |
+        Confirm a payment session with a tokenized payment method.
+        Routes the payment to the appropriate processor based on routing rules.
+      operationId: confirmPayment
+      tags:
+        - Payments
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - ClientSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+            examples:
+              card:
+                summary: Card payment
+                value:
+                  payment_method_type: card
+                  token_id: tok_abc123
+                  token_provider: basis_theory
+              applePay:
+                summary: Apple Pay
+                value:
+                  payment_method_type: apple_pay
+                  apple_pay_token: '{"paymentData":{}}'
+                  token_provider: basis_theory
+              googlePay:
+                summary: Google Pay
+                value:
+                  payment_method_type: google_pay
+                  google_pay_token: '{"paymentMethodData":{}}'
+                  token_provider: basis_theory
+              bankAccount:
+                summary: Bank account (ACH)
+                value:
+                  payment_method_type: bank_account
+                  token_id: tok_bank_xyz
+                  token_provider: basis_theory
+                  bank_account:
+                    account_holder_name: John Doe
+                    account_type: checking
+      responses:
+        '200':
+          description: Payment confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Payment failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentError'
+
+  /apple-pay-validate-merchant:
+    post:
+      summary: Validate Apple Pay Merchant
+      description: |
+        Validate merchant for Apple Pay session.
+        Called during Apple Pay checkout flow.
+      operationId: validateApplePayMerchant
+      tags:
+        - Apple Pay
+      security:
+        - ClientSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - validation_url
+                - domain
+                - session_id
+              properties:
+                validation_url:
+                  type: string
+                  description: Apple's validation URL
+                domain:
+                  type: string
+                  description: Domain making the request
+                session_id:
+                  type: string
+                  format: uuid
+                  description: Payment session ID
+      responses:
+        '200':
+          description: Merchant validated
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Apple Pay merchant session object
+
+  /threeds-authenticate:
+    post:
+      summary: Initiate 3D Secure Authentication
+      description: |
+        Create a 3DS session for a card token and return challenge data if required.
+      operationId: authenticate3ds
+      tags:
+        - 3D Secure
+      security:
+        - ClientSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreeDSAuthenticateRequest'
+      responses:
+        '200':
+          description: 3DS session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDSSession'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /threeds-authenticate/sessions/{session_id}/result:
+    get:
+      summary: Get 3D Secure Result
+      description: |
+        Fetch the latest authentication result for a 3DS session.
+      operationId: get3dsResult
+      tags:
+        - 3D Secure
+      security:
+        - ClientSecretAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 3DS result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDSResult'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /threeds-authenticate/sessions/{session_id}/challenge-complete:
+    post:
+      summary: Complete 3D Secure Challenge
+      description: |
+        Confirm completion of a 3DS challenge and refresh result values.
+      operationId: complete3dsChallenge
+      tags:
+        - 3D Secure
+      security:
+        - ClientSecretAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Challenge result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDSResult'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /network-tokens:
+    post:
+      summary: Create Network Token
+      description: |
+        Create a network token for a card token. Optionally return a cryptogram.
+      operationId: createNetworkToken
+      tags:
+        - Network Tokens
+      security:
+        - ClientSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNetworkTokenRequest'
+      responses:
+        '201':
+          description: Network token created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkToken'
+
+  /network-tokens/{network_token_id}/cryptogram:
+    post:
+      summary: Generate Cryptogram
+      description: |
+        Generate a cryptogram for a network token.
+      operationId: generateCryptogram
+      tags:
+        - Network Tokens
+      security:
+        - ClientSecretAuth: []
+      parameters:
+        - name: network_token_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Cryptogram generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cryptogram'
+
+  /network-tokens/{network_token_id}:
+    get:
+      summary: Get Network Token
+      description: |
+        Retrieve network token details.
+      operationId: getNetworkToken
+      tags:
+        - Network Tokens
+      security:
+        - ClientSecretAuth: []
+      parameters:
+        - name: network_token_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Network token details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkToken'
+
+    delete:
+      summary: Delete Network Token
+      description: |
+        Suspend a network token.
+      operationId: deleteNetworkToken
+      tags:
+        - Network Tokens
+      security:
+        - ClientSecretAuth: []
+      parameters:
+        - name: network_token_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Network token deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /transactions/sync:
+    post:
+      summary: Sync Fallback Transactions
+      description: |
+        Record fallback PSP transactions for reconciliation.
+      operationId: syncTransactions
+      tags:
+        - Transactions
+      security:
+        - ClientSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncTransactionRequest'
+      responses:
+        '200':
+          description: Sync acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced:
+                    type: boolean
+
+  /card-collection-proxy:
+    post:
+      summary: Card Collection Proxy
+      description: |
+        Tokenize inbound card data and forward to a destination URL.
+      operationId: cardCollectionProxy
+      tags:
+        - Card Collection
+      parameters:
+        - name: BT-PROXY-KEY
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Destination response
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: API key (sk_test_* or sk_live_*)
+    ClientSecretAuth:
+      type: http
+      scheme: bearer
+      description: Client secret from payment session
+
+  schemas:
+    CreateSessionRequest:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Amount in cents
+          example: 4990
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+          example: USD
+        external_id:
+          type: string
+          description: Your order or reference ID
+          example: order_12345
+        customer:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+            name:
+              type: string
+        capture_method:
+          type: string
+          enum: [automatic, manual]
+          default: automatic
+          description: Whether to capture immediately or authorize only
+        payment_method_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodType'
+          description: Allowed payment methods (defaults to tenant config)
+        success_url:
+          type: string
+          format: uri
+          description: Redirect URL after successful payment
+        cancel_url:
+          type: string
+          format: uri
+          description: Redirect URL if customer cancels
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom key-value metadata
+
+    PaymentSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client_secret:
+          type: string
+          description: Secret for frontend SDK authentication
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        amount:
+          type: integer
+        currency:
+          type: string
+        external_id:
+          type: string
+        fallback_url:
+          type: string
+          format: uri
+          description: PSP hosted checkout for fallback
+        created_at:
+          type: string
+          format: date-time
+
+    SessionConfig:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        client_secret:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        capture_provider:
+          type: string
+          enum: [basis_theory]
+        basis_theory_key:
+          type: string
+          description: Public key for Basis Theory Elements
+        fallback_url:
+          type: string
+        payment_methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodType'
+        apple_pay:
+          $ref: '#/components/schemas/ApplePayConfig'
+        google_pay:
+          $ref: '#/components/schemas/GooglePayConfig'
+        bank_account:
+          $ref: '#/components/schemas/BankAccountConfig'
+
+    ApplePayConfig:
+      type: object
+      properties:
+        merchant_id:
+          type: string
+        merchant_name:
+          type: string
+        country_code:
+          type: string
+        supported_networks:
+          type: array
+          items:
+            type: string
+
+    GooglePayConfig:
+      type: object
+      properties:
+        merchant_id:
+          type: string
+        merchant_name:
+          type: string
+        environment:
+          type: string
+          enum: [TEST, PRODUCTION]
+        allowed_card_networks:
+          type: array
+          items:
+            type: string
+
+    BankAccountConfig:
+      type: object
+      properties:
+        account_types:
+          type: array
+          items:
+            type: string
+            enum: [checking, savings]
+
+    ConfirmPaymentRequest:
+      type: object
+      required:
+        - payment_method_type
+        - token_provider
+      properties:
+        payment_method_type:
+          $ref: '#/components/schemas/PaymentMethodType'
+        token_id:
+          type: string
+          description: Basis Theory token ID (required for card/bank)
+        token_provider:
+          type: string
+          enum: [basis_theory, vgs]
+        apple_pay_token:
+          type: string
+          description: JSON-encoded Apple Pay token (required for apple_pay)
+        google_pay_token:
+          type: string
+          description: JSON-encoded Google Pay token (required for google_pay)
+        vgs_data:
+          type: object
+          description: Required when token_provider is vgs
+          properties:
+            card_number:
+              type: string
+            card_expiry:
+              type: string
+            card_cvc:
+              type: string
+        bank_account:
+          type: object
+          properties:
+            account_holder_name:
+              type: string
+            account_type:
+              type: string
+              enum: [checking, savings]
+
+    ThreeDSAuthenticateRequest:
+      type: object
+      required:
+        - session_id
+        - token_id
+        - amount
+        - currency
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        token_id:
+          type: string
+        amount:
+          type: integer
+          description: Amount in cents
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        challenge_preference:
+          type: string
+          enum: [no_preference, no_challenge, challenge_requested, challenge_mandated]
+
+    ThreeDSSession:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        challenge_required:
+          type: boolean
+        challenge_url:
+          type: string
+        authentication_value:
+          type: string
+        eci:
+          type: string
+        ds_transaction_id:
+          type: string
+        liability_shift:
+          type: boolean
+
+    ThreeDSResult:
+      type: object
+      properties:
+        status:
+          type: string
+        authentication_value:
+          type: string
+        eci:
+          type: string
+        ds_transaction_id:
+          type: string
+        liability_shift:
+          type: boolean
+
+    CreateNetworkTokenRequest:
+      type: object
+      required:
+        - session_id
+        - token_id
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        token_id:
+          type: string
+        request_cryptogram:
+          type: boolean
+
+    NetworkToken:
+      type: object
+      properties:
+        networkTokenId:
+          type: string
+        network:
+          type: string
+        status:
+          type: string
+        tokenExpiryMonth:
+          type: string
+        tokenExpiryYear:
+          type: string
+        cryptogram:
+          type: string
+        cryptogramType:
+          type: string
+
+    Cryptogram:
+      type: object
+      properties:
+        cryptogram:
+          type: string
+        cryptogramType:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    SyncTransactionRequest:
+      type: object
+      required:
+        - session_id
+        - route
+        - data
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        route:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+        currency:
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        payment_method_type:
+          $ref: '#/components/schemas/PaymentMethodType'
+        psp:
+          $ref: '#/components/schemas/PSPName'
+        psp_transaction_id:
+          type: string
+        card:
+          type: object
+          properties:
+            brand:
+              type: string
+            last4:
+              type: string
+            exp_month:
+              type: integer
+            exp_year:
+              type: integer
+        wallet:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [apple_pay, google_pay]
+            card_network:
+              type: string
+        bank_account:
+          type: object
+          properties:
+            bank_name:
+              type: string
+            last4:
+              type: string
+            account_type:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+
+    PaymentError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          description: Error code for programmatic handling
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    PaymentMethodType:
+      type: string
+      enum:
+        - card
+        - apple_pay
+        - google_pay
+        - bank_account
+
+    SessionStatus:
+      type: string
+      enum:
+        - pending
+        - requires_payment_method
+        - processing
+        - succeeded
+        - failed
+        - canceled
+        - refunded
+
+    PaymentStatus:
+      type: string
+      enum:
+        - pending
+        - authorized
+        - captured
+        - failed
+        - canceled
+
+    PSPName:
+      type: string
+      enum:
+        - stripe
+        - adyen
+        - authorizenet
+        - chase
+        - nuvei
+        - dlocal
+        - braintree
+        - checkoutcom
+        - airwallex
+
+tags:
+  - name: Sessions
+    description: Payment session management
+  - name: Payments
+    description: Payment confirmation and processing
+  - name: Apple Pay
+    description: Apple Pay integration endpoints
+  - name: 3D Secure
+    description: 3DS authentication sessions and results
+  - name: Network Tokens
+    description: Network token management and cryptograms
+  - name: Transactions
+    description: Fallback transaction sync
+  - name: Card Collection
+    description: Tokenization proxy for inbound card data

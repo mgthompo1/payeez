@@ -12,6 +12,7 @@ interface CreateSessionRequest {
   amount: number;
   currency: string;
   external_id?: string;
+  payment_method_types?: string[];
   customer?: {
     email?: string;
     name?: string;
@@ -108,6 +109,7 @@ serve(async (req) => {
         currency: body.currency.toUpperCase(),
         status: 'requires_payment_method',
         capture_method: body.capture_method || 'automatic',
+        payment_method_types: body.payment_method_types,
         customer_email: body.customer?.email,
         customer_name: body.customer?.name,
         metadata: body.metadata || {},
