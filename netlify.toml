@@ -1,0 +1,14 @@
+# Monorepo configuration - build from packages/web
+[build]
+  base = "packages/web"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NETLIFY_BLOBS_ENABLED = "false"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"
