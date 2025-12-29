@@ -18,6 +18,9 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Payeez",
   description: "Payment orchestration control plane for modern teams.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

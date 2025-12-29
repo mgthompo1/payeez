@@ -7,6 +7,10 @@ export type PSPName = 'stripe' | 'adyen' | 'authorizenet' | 'chase' | 'nuvei' | 
 
 export type PaymentStatus = 'pending' | 'requires_action' | 'processing' | 'authorized' | 'captured' | 'failed' | 'canceled' | 'refunded'
 
+export type PaymentMethodType = 'card' | 'apple_pay' | 'google_pay' | 'bank_account'
+
+export type VaultProvider = 'basis_theory' | 'vgs'
+
 export type CaptureMethod = 'automatic' | 'manual'
 
 export type ThreeDSStatus = 'not_required' | 'pending' | 'challenge_required' | 'authenticated' | 'failed'
@@ -63,7 +67,26 @@ export interface PaymentSession {
 }
 
 // Payment Confirmation
-export interface ConfirmPaymentRequest {
+export interface ConfirmPaymentRequestV2 {
+  payment_method_type: PaymentMethodType
+  token_id?: string
+  token_provider: VaultProvider
+  psp?: string
+  routing_profile_id?: string
+  apple_pay_token?: string
+  google_pay_token?: string
+  bank_account?: {
+    account_holder_name?: string
+    account_type?: 'checking' | 'savings'
+  }
+  vgs_data?: {
+    card_number: string
+    card_expiry: string
+    card_cvc: string
+  }
+}
+
+export interface LegacyConfirmPaymentRequest {
   payment_method: {
     type: 'card' | 'token'
     card?: CardData
@@ -72,6 +95,8 @@ export interface ConfirmPaymentRequest {
   return_url?: string
   idempotency_key?: string
 }
+
+export type ConfirmPaymentRequest = ConfirmPaymentRequestV2 | LegacyConfirmPaymentRequest
 
 export interface PaymentResult {
   session_id: string

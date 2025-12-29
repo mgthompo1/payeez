@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import {
@@ -75,9 +76,14 @@ export default function HomePage() {
       <header className="relative z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
           <Link href="/" className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a] flex items-center justify-center">
-              <span className="text-[var(--brand-ink)] font-semibold text-sm">PZ</span>
-            </div>
+            <Image
+              src="/brand/payeez-mark.svg"
+              alt="Payeez"
+              width={36}
+              height={36}
+              className="h-9 w-9"
+              priority
+            />
             <div className="leading-tight">
               <div className="text-sm tracking-[0.2em] text-[#c8ff5a]/80 uppercase">Payeez</div>
               <div className="text-xs text-[#8ba3b7]">Payments Control Plane</div>
@@ -354,9 +360,13 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-6 md:grid-cols-4">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a] flex items-center justify-center">
-                <span className="text-[var(--brand-ink)] font-semibold text-sm">PZ</span>
-              </div>
+              <Image
+                src="/brand/payeez-mark.svg"
+                alt="Payeez"
+                width={36}
+                height={36}
+                className="h-9 w-9"
+              />
               <span className="text-sm tracking-[0.3em] uppercase text-[#9bb0c2]">Payeez</span>
             </div>
             <p className="text-sm text-[#9bb0c2]">

@@ -194,6 +194,98 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaymentError'
 
+  /capture-payment/{payment_id}:
+    post:
+      summary: Capture Payment
+      description: |
+        Capture an authorized payment (manual capture flow).
+        Supports partial captures by specifying an amount.
+      operationId: capturePayment
+      tags:
+        - Payments
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapturePaymentRequest'
+            examples:
+              full:
+                summary: Full capture
+                value: {}
+              partial:
+                summary: Partial capture
+                value:
+                  amount: 2500
+      responses:
+        '200':
+          description: Payment captured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Capture failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentError'
+
+  /refund-payment/{payment_id}:
+    post:
+      summary: Refund Payment
+      description: |
+        Refund a captured payment. Supports partial refunds by specifying an amount.
+      operationId: refundPayment
+      tags:
+        - Payments
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundPaymentRequest'
+            examples:
+              full:
+                summary: Full refund
+                value: {}
+              partial:
+                summary: Partial refund
+                value:
+                  amount: 1500
+                  reason: customer_request
+      responses:
+        '200':
+          description: Refund created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '400':
+          description: Refund failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentError'
+
   /apple-pay-validate-merchant:
     post:
       summary: Validate Apple Pay Merchant
@@ -674,6 +766,13 @@ components:
         token_provider:
           type: string
           enum: [basis_theory, vgs]
+        psp:
+          type: string
+          description: Force a specific PSP for the initial attempt
+        routing_profile_id:
+          type: string
+          format: uuid
+          description: Use a specific routing profile for PSP selection
         apple_pay_token:
           type: string
           description: JSON-encoded Apple Pay token (required for apple_pay)
@@ -698,6 +797,23 @@ components:
             account_type:
               type: string
               enum: [checking, savings]
+
+    CapturePaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: Partial capture amount in cents (omit for full capture)
+
+    RefundPaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: Partial refund amount in cents (omit for full refund)
+        reason:
+          type: string
+          description: Optional refund reason
 
     ThreeDSAuthenticateRequest:
       type: object
@@ -840,6 +956,10 @@ components:
           $ref: '#/components/schemas/PSPName'
         psp_transaction_id:
           type: string
+        captured_amount:
+          type: integer
+        refunded_amount:
+          type: integer
         card:
           type: object
           properties:
@@ -868,6 +988,28 @@ components:
               type: string
             account_type:
               type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Refund:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [pending, succeeded, failed]
+        reason:
+          type: string
         created_at:
           type: string
           format: date-time
@@ -914,6 +1056,7 @@ components:
         - captured
         - failed
         - canceled
+        - refunded
 
     PSPName:
       type: string

@@ -11,6 +11,22 @@ export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [attemptStart, setAttemptStart] = useState('')
+  const [attemptEnd, setAttemptEnd] = useState('')
+  const [sessionStart, setSessionStart] = useState('')
+  const [sessionEnd, setSessionEnd] = useState('')
+
+  const toStartOfDayIso = (value: string) => {
+    const date = new Date(value)
+    date.setHours(0, 0, 0, 0)
+    return date.toISOString()
+  }
+
+  const toEndOfDayIso = (value: string) => {
+    const date = new Date(value)
+    date.setHours(23, 59, 59, 999)
+    return date.toISOString()
+  }
 
   const searchTransactions = async () => {
     setLoading(true)
@@ -19,23 +35,42 @@ export default function TransactionsPage() {
     let query = supabase
       .from('payment_attempts')
       .select(`
-        id,
-        amount,
-        currency,
-        status,
-        psp,
-        psp_transaction_id,
-        created_at,
-        payment_sessions (
-          customer_email,
-          external_id
-        )
-      `)
+          id,
+          amount,
+          currency,
+          status,
+          psp,
+          psp_transaction_id,
+          created_at,
+          payment_sessions (
+            customer_email,
+            external_id,
+            created_at
+          )
+        `)
       .order('created_at', { ascending: false })
       .limit(50)
 
     if (searchQuery) {
-      query = query.or(`psp_transaction_id.ilike.%${searchQuery}%,id.eq.${searchQuery}`)
+      query = query.or(
+        `psp_transaction_id.ilike.%${searchQuery}%,id.eq.${searchQuery},payment_sessions.customer_email.ilike.%${searchQuery}%,payment_sessions.external_id.ilike.%${searchQuery}%`
+      )
+    }
+
+    if (attemptStart) {
+      query = query.gte('created_at', toStartOfDayIso(attemptStart))
+    }
+
+    if (attemptEnd) {
+      query = query.lte('created_at', toEndOfDayIso(attemptEnd))
+    }
+
+    if (sessionStart) {
+      query = query.gte('payment_sessions.created_at', toStartOfDayIso(sessionStart))
+    }
+
+    if (sessionEnd) {
+      query = query.lte('payment_sessions.created_at', toEndOfDayIso(sessionEnd))
     }
 
     const { data, error } = await query
@@ -92,7 +127,8 @@ export default function TransactionsPage() {
 
       {/* Search and Filters */}
       <div className="rounded-2xl bg-[#111] border border-white/10 p-6">
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <Input
@@ -121,6 +157,43 @@ export default function TransactionsPage() {
               'Search'
             )}
           </Button>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Attempt date</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="date"
+                  value={attemptStart}
+                  onChange={(e) => setAttemptStart(e.target.value)}
+                  className="bg-[#0a0a0a] border-white/10 text-white"
+                />
+                <Input
+                  type="date"
+                  value={attemptEnd}
+                  onChange={(e) => setAttemptEnd(e.target.value)}
+                  className="bg-[#0a0a0a] border-white/10 text-white"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Session date</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="date"
+                  value={sessionStart}
+                  onChange={(e) => setSessionStart(e.target.value)}
+                  className="bg-[#0a0a0a] border-white/10 text-white"
+                />
+                <Input
+                  type="date"
+                  value={sessionEnd}
+                  onChange={(e) => setSessionEnd(e.target.value)}
+                  className="bg-[#0a0a0a] border-white/10 text-white"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

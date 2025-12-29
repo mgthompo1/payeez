@@ -59,7 +59,8 @@ export type PaymentAttemptStatus =
   | 'authorized'
   | 'captured'
   | 'failed'
-  | 'canceled';
+  | 'canceled'
+  | 'refunded';
 
 export type CaptureMethod = 'automatic' | 'manual';
 
@@ -97,12 +98,20 @@ export interface PaymentSession {
 
 export interface ConfirmPaymentRequest {
   payment_method_type: PaymentMethodType;
-  token_id: string;
+  token_id?: string;
   token_provider: VaultProvider;
+  psp?: string;
+  routing_profile_id?: string;
   // Apple Pay specific
   apple_pay_token?: string; // PKPaymentToken from Apple
   // Google Pay specific
   google_pay_token?: string; // PaymentData from Google
+  // VGS-specific data with field aliases
+  vgs_data?: {
+    card_number: string;
+    card_expiry: string;
+    card_cvc: string;
+  };
   // Bank account specific
   bank_account?: {
     routing_number?: string; // tokenized
@@ -121,6 +130,8 @@ export interface Payment {
   payment_method_type: PaymentMethodType;
   psp: PSPName;
   psp_transaction_id?: string;
+  captured_amount?: number;
+  refunded_amount?: number;
   card?: {
     brand?: string;
     last4?: string;
@@ -151,6 +162,7 @@ export interface Refund {
   id: string;
   payment_id: string;
   amount: number;
+  currency?: string;
   status: 'pending' | 'succeeded' | 'failed';
   reason?: string;
   created_at: string;

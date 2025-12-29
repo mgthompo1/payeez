@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -11,7 +12,11 @@ import {
   BookOpen,
   GitBranch,
   ChevronRight,
-  Zap
+  Zap,
+  Users,
+  FileText,
+  Scale,
+  Plug
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -26,7 +31,11 @@ import {
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCard },
+  { name: 'Reports', href: '/dashboard/reports', icon: FileText },
+  { name: 'Reconciliation', href: '/dashboard/reconciliation', icon: Scale },
   { name: 'Orchestration', href: '/dashboard/orchestration', icon: GitBranch },
+  { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
+  { name: 'Team', href: '/dashboard/team', icon: Users },
   { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
   { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
   { name: 'Docs', href: '/dashboard/docs', icon: BookOpen },
@@ -53,12 +62,16 @@ export default async function DashboardLayout({
       <div className="fixed inset-y-0 left-0 z-50 w-64 bg-[#0f1621] border-r border-white/10">
         <div className="flex h-16 items-center px-6 border-b border-white/10">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a] flex items-center justify-center">
-              <span className="text-[var(--brand-ink)] font-semibold text-xs">PZ</span>
-            </div>
+            <Image
+              src="/brand/payeez-mark.svg"
+              alt="Payeez"
+              width={36}
+              height={36}
+              className="h-9 w-9"
+              priority
+            />
             <div>
               <div className="text-xs uppercase tracking-[0.3em] text-[#8ba3b7]">Payeez</div>
-              <div className="text-[10px] text-[#9bb0c2]">Control plane</div>
             </div>
           </Link>
         </div>

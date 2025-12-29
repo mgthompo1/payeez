@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import {
   Copy,
@@ -73,9 +73,11 @@ function ParamTable({ params }: { params: { name: string; type: string; required
           </tr>
         </thead>
         <tbody>
-          {params.map((param, idx) => (
-            <>
-              <tr key={param.name} className={idx !== params.length - 1 ? 'border-b border-white/5' : ''}>
+          {params.map((param, idx) => {
+            const rowKey = `${param.name}-${idx}`
+            return (
+              <Fragment key={rowKey}>
+                <tr className={idx !== params.length - 1 ? 'border-b border-white/5' : ''}>
                 <td className="px-4 py-3">
                   <code className="text-[#19d1c3]">{param.name}</code>
                   {param.required && <span className="text-red-400 ml-1">*</span>}
@@ -92,8 +94,9 @@ function ParamTable({ params }: { params: { name: string; type: string; required
                   <td className="px-4 py-2 text-gray-400">{child.description}</td>
                 </tr>
               ))}
-            </>
-          ))}
+              </Fragment>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -598,6 +601,34 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
             description="Capture, refund, and manage payments"
           />
 
+          <div className="rounded-xl bg-[#111] border border-white/10 p-6">
+            <h3 className="text-sm font-semibold text-white mb-4">Transaction types</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Purchase</div>
+                <div className="text-sm text-white mt-1">Use <code className="text-[#19d1c3]">POST /confirm-payment/:id</code> with automatic capture (default).</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Authorize</div>
+                <div className="text-sm text-white mt-1">Set <code className="text-[#19d1c3]">capture_method: "manual"</code> when creating the session.</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Capture</div>
+                <div className="text-sm text-white mt-1">Call <code className="text-[#19d1c3]">POST /capture-payment/:id</code> for full or partial capture.</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Refund</div>
+                <div className="text-sm text-white mt-1">Call <code className="text-[#19d1c3]">POST /refund-payment/:id</code> with optional <code className="text-[#19d1c3]">amount</code> for partial refunds.</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4 md:col-span-2">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Tokenize</div>
+                <div className="text-sm text-white mt-1">
+                  Tokenization happens via the SDK or the <code className="text-[#19d1c3]">/card-collection-proxy</code> endpoint for server-side flows.
+                </div>
+              </div>
+            </div>
+          </div>
+
           <EndpointCard method="POST" path="/confirm-payment/:id" description="Confirm a payment">
             <div className="space-y-4 mt-4">
               <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-4">
@@ -612,8 +643,15 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
                   { name: 'payment_method_type', type: 'string', required: true, description: '"card", "apple_pay", "google_pay", or "bank_account"' },
                   { name: 'token_id', type: 'string', description: 'Token ID from card or bank element' },
                   { name: 'token_provider', type: 'string', description: '"basis_theory" or "vgs"' },
+                  { name: 'psp', type: 'string', description: 'Force a specific PSP for the initial attempt' },
+                  { name: 'routing_profile_id', type: 'string', description: 'Use a specific routing profile for PSP selection' },
                   { name: 'apple_pay_token', type: 'string', description: 'Apple Pay token payload (stringified)' },
                   { name: 'google_pay_token', type: 'string', description: 'Google Pay token payload (stringified)' },
+                  { name: 'vgs_data', type: 'object', description: 'Required when token_provider is vgs', children: [
+                    { name: 'card_number', type: 'string', description: 'VGS card number alias' },
+                    { name: 'card_expiry', type: 'string', description: 'VGS card expiry alias' },
+                    { name: 'card_cvc', type: 'string', description: 'VGS card CVC alias' },
+                  ]},
                   { name: 'bank_account', type: 'object', description: 'Bank account details (for ACH)', children: [
                     { name: 'account_holder_name', type: 'string', description: 'Account holder name' },
                     { name: 'account_type', type: 'string', description: '"checking" or "savings"' },
@@ -644,6 +682,68 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
     "is_retry": false
   },
   "created_at": "2024-01-15T10:31:00Z"
+}`} />
+              </div>
+            </div>
+          </EndpointCard>
+
+          <EndpointCard method="POST" path="/capture-payment/:id" description="Capture an authorized payment">
+            <div className="space-y-4 mt-4">
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
+                <p className="text-sm text-amber-400">
+                  Use for manual capture flows. Omit <code className="text-[#19d1c3]">amount</code> for full capture.
+                </p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
+                <ParamTable params={[
+                  { name: 'amount', type: 'integer', description: 'Partial capture amount in cents (optional)' },
+                ]} />
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-white mb-3">Response</h4>
+                <CodeBlock language="json" code={`{
+  "id": "pay_8xM2nQ4vR7kL9pYz",
+  "session_id": "sess_2xK9mN7vQ3pL8wYz",
+  "amount": 4990,
+  "currency": "USD",
+  "status": "captured",
+  "payment_method_type": "card",
+  "psp": "stripe",
+  "psp_transaction_id": "pi_3abc123",
+  "captured_amount": 2500,
+  "refunded_amount": 0,
+  "created_at": "2024-01-15T10:35:00Z"
+}`} />
+              </div>
+            </div>
+          </EndpointCard>
+
+          <EndpointCard method="POST" path="/refund-payment/:id" description="Refund a captured payment">
+            <div className="space-y-4 mt-4">
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4">
+                <p className="text-sm text-red-400">
+                  Supports partial refunds by setting <code className="text-[#19d1c3]">amount</code>.
+                  Use <code className="text-[#19d1c3]">Idempotency-Key</code> to safely retry.
+                </p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
+                <ParamTable params={[
+                  { name: 'amount', type: 'integer', description: 'Partial refund amount in cents (optional)' },
+                  { name: 'reason', type: 'string', description: 'Reason for refund (optional)' },
+                ]} />
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-white mb-3">Response</h4>
+                <CodeBlock language="json" code={`{
+  "id": "re_8xM2nQ4vR7kL9pYz",
+  "payment_id": "pay_8xM2nQ4vR7kL9pYz",
+  "amount": 1500,
+  "currency": "USD",
+  "status": "succeeded",
+  "reason": "customer_request",
+  "created_at": "2024-01-15T10:40:00Z"
 }`} />
               </div>
             </div>
@@ -916,6 +1016,21 @@ await Payeez.confirm('card', { networkToken: true });`} />
             title="API Card Collection"
             description="Receive card data via API while staying PCI compliant"
           />
+
+          <EndpointCard method="POST" path="/card-collection-proxy" description="Tokenize inbound card data and forward it to your endpoint" defaultExpanded>
+            <div className="space-y-4 mt-4">
+              <div>
+                <h4 className="text-sm font-medium text-white mb-3">Headers</h4>
+                <ParamTable params={[
+                  { name: 'BT-PROXY-KEY', type: 'string', required: true, description: 'Proxy key from dashboard configuration' },
+                ]} />
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-white mb-3">Response</h4>
+                <p className="text-sm text-gray-400">Returns the downstream response from your destination URL after tokenization.</p>
+              </div>
+            </div>
+          </EndpointCard>
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">Use Cases</h3>

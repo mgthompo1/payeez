@@ -1,0 +1,361 @@
+/**
+ * Windcave WooCommerce Checkout Styles
+ */
+
+/* Test mode notice */
+.windcave-test-mode-notice {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+/* Payment form container */
+.windcave-payment-form {
+    margin-top: 15px;
+}
+
+/* Drop-in container */
+#windcave-dropin-container,
+.windcave-blocks-dropin-container {
+    min-height: 200px;
+}
+
+/* Hide the drop-in's built-in pay button visually - WooCommerce's Place Order button triggers it programmatically */
+/* Using position/opacity instead of display:none so we can still trigger clicks via JS */
+#windcave-dropin-container .windcave-dropin-submit,
+#windcave-dropin-container .windcave-pay-button,
+#windcave-dropin-container [class*="submit-button"],
+#windcave-dropin-container [class*="pay-button"],
+#windcave-dropin-container button[type="submit"],
+.windcave-blocks-dropin-container .windcave-dropin-submit,
+.windcave-blocks-dropin-container .windcave-pay-button,
+.windcave-blocks-dropin-container [class*="submit-button"],
+.windcave-blocks-dropin-container [class*="pay-button"],
+.windcave-blocks-dropin-container button[type="submit"] {
+    position: absolute !important;
+    left: -9999px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    height: 1px !important;
+    width: 1px !important;
+    overflow: hidden !important;
+}
+
+/* Hosted Fields */
+.windcave-hosted-fields,
+.windcave-blocks-hosted-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.windcave-field-wrapper,
+.windcave-blocks-field-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.windcave-field-wrapper label,
+.windcave-blocks-field-wrapper label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.windcave-hosted-field,
+.windcave-blocks-hosted-field {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0;
+    background-color: #fff;
+    min-height: 44px;
+    transition: border-color 0.2s ease;
+}
+
+.windcave-hosted-field:focus-within,
+.windcave-blocks-hosted-field:focus-within {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+.windcave-hosted-field iframe,
+.windcave-blocks-hosted-field iframe {
+    width: 100%;
+    height: 44px;
+    border: none;
+}
+
+/* Field row for expiry and CVV */
+.windcave-field-row,
+.windcave-blocks-field-row {
+    display: flex;
+    gap: 15px;
+}
+
+.windcave-field-half,
+.windcave-blocks-field-half {
+    flex: 1;
+}
+
+/* Saved tokens */
+.windcave-saved-tokens {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.windcave-saved-token {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.windcave-saved-token:hover {
+    border-color: #0073aa;
+}
+
+.windcave-saved-token input[type="radio"] {
+    margin: 0;
+}
+
+.windcave-saved-token span {
+    font-size: 14px;
+}
+
+/* Payment label with icons */
+.windcave-payment-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.windcave-card-icons {
+    display: flex;
+    gap: 5px;
+}
+
+.windcave-card-icon {
+    height: 24px;
+    width: auto;
+}
+
+/* Error message */
+.windcave-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+/* Description */
+.windcave-description {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+/* Blocks-specific styles */
+.windcave-blocks-payment-form {
+    padding: 15px 0;
+}
+
+.windcave-blocks-payment-form .windcave-description {
+    margin-top: 0;
+}
+
+/* Loading state */
+.windcave-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+}
+
+.windcave-loading::after {
+    content: '';
+    width: 30px;
+    height: 30px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0073aa;
+    border-radius: 50%;
+    animation: windcave-spin 1s linear infinite;
+}
+
+@keyframes windcave-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .windcave-field-row,
+    .windcave-blocks-field-row {
+        flex-direction: column;
+    }
+
+    .windcave-field-half,
+    .windcave-blocks-field-half {
+        width: 100%;
+    }
+}
+
+/* WooCommerce integration */
+.woocommerce-checkout .windcave-payment-form {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+/* Payment method icon */
+.payment_method_windcave > label img {
+    max-height: 30px;
+    margin-left: 10px;
+}
+
+/* 3DS iframe modal overlay */
+.windcave-3ds-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+}
+
+.windcave-3ds-iframe {
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Admin styles */
+.woocommerce_page_wc-settings .windcave-admin-notice {
+    background-color: #e7f5ff;
+    border-left: 4px solid #0073aa;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+}
+
+/* Card type icons in checkout */
+.payment_method_windcave .windcave-accepted-cards {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.payment_method_windcave .windcave-accepted-cards img {
+    height: 20px;
+    width: auto;
+}
+
+/* Apple Pay Express Button */
+.windcave-applepay-express {
+    margin: 10px 0;
+    min-height: 50px;
+}
+
+.windcave-applepay-express apple-pay-button {
+    --apple-pay-button-width: 100%;
+    --apple-pay-button-height: 44px;
+    --apple-pay-button-border-radius: 4px;
+    --apple-pay-button-padding: 0;
+    display: block;
+}
+
+/* Cart page Apple Pay Express */
+.woocommerce-cart .windcave-applepay-express {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e5e5e5;
+}
+
+/* Mini-cart Apple Pay Express */
+.widget_shopping_cart .windcave-applepay-express {
+    margin-top: 10px;
+}
+
+.widget_shopping_cart .windcave-applepay-express apple-pay-button {
+    --apple-pay-button-height: 40px;
+}
+
+/* Apple Pay Express separator */
+.windcave-applepay-express::before {
+    content: '';
+    display: block;
+}
+
+/* Hide when not available */
+.windcave-applepay-express:empty {
+    display: none;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+}
+
+/* Google Pay Express Button */
+.windcave-googlepay-express {
+    margin: 10px 0;
+    min-height: 50px;
+}
+
+.windcave-googlepay-express button,
+.windcave-googlepay-express .gpay-button {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 4px;
+}
+
+/* Cart page Google Pay Express */
+.woocommerce-cart .windcave-googlepay-express {
+    margin-top: 10px;
+}
+
+/* Mini-cart Google Pay Express */
+.widget_shopping_cart .windcave-googlepay-express {
+    margin-top: 10px;
+}
+
+.widget_shopping_cart .windcave-googlepay-express button,
+.widget_shopping_cart .windcave-googlepay-express .gpay-button {
+    min-height: 40px;
+}
+
+/* Hide when not available */
+.windcave-googlepay-express:empty {
+    display: none;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+}
+
+/* Blocks mini-cart express buttons */
+.wc-block-mini-cart__footer .windcave-applepay-express,
+.wc-block-mini-cart__footer .windcave-googlepay-express {
+    margin-bottom: 10px;
+}
+
+.wc-block-mini-cart__footer-actions .windcave-applepay-express,
+.wc-block-mini-cart__footer-actions .windcave-googlepay-express {
+    width: 100%;
+}

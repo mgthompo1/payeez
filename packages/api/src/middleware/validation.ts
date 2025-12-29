@@ -31,6 +31,18 @@ export const paymentMethodSchema = z.discriminatedUnion('type', [
   }),
 ])
 
+const paymentMethodTypeSchema = z.enum(['card', 'apple_pay', 'google_pay', 'bank_account'])
+const tokenProviderSchema = z.enum(['basis_theory', 'vgs'])
+const bankAccountSchema = z.object({
+  account_holder_name: z.string().max(200).optional(),
+  account_type: z.enum(['checking', 'savings']).optional(),
+}).optional()
+const vgsDataSchema = z.object({
+  card_number: z.string().min(1),
+  card_expiry: z.string().min(1),
+  card_cvc: z.string().min(1),
+}).optional()
+
 // Create session request
 export const createSessionSchema = z.object({
   amount: amountSchema,
@@ -50,11 +62,60 @@ export const createSessionSchema = z.object({
 })
 
 // Confirm payment request
-export const confirmPaymentSchema = z.object({
+const confirmPaymentSchemaV2 = z.object({
+  payment_method_type: paymentMethodTypeSchema,
+  token_id: z.string().min(1).optional(),
+  token_provider: tokenProviderSchema,
+  psp: z.string().min(1).optional(),
+  routing_profile_id: z.string().uuid().optional(),
+  apple_pay_token: z.string().min(1).optional(),
+  google_pay_token: z.string().min(1).optional(),
+  bank_account: bankAccountSchema,
+  vgs_data: vgsDataSchema,
+}).superRefine((data, ctx) => {
+  if ((data.payment_method_type === 'card' || data.payment_method_type === 'bank_account') && !data.token_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['token_id'],
+      message: 'token_id is required for card and bank account payments',
+    })
+  }
+
+  if (data.payment_method_type === 'apple_pay' && !data.apple_pay_token) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['apple_pay_token'],
+      message: 'apple_pay_token is required for Apple Pay',
+    })
+  }
+
+  if (data.payment_method_type === 'google_pay' && !data.google_pay_token) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['google_pay_token'],
+      message: 'google_pay_token is required for Google Pay',
+    })
+  }
+
+  if (data.token_provider === 'vgs' && !data.vgs_data) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['vgs_data'],
+      message: 'vgs_data is required when token_provider is vgs',
+    })
+  }
+})
+
+const legacyConfirmPaymentSchema = z.object({
   payment_method: paymentMethodSchema,
   return_url: z.string().url().optional(),
   idempotency_key: z.string().max(100).optional(),
 })
+
+export const confirmPaymentSchema = z.union([
+  confirmPaymentSchemaV2,
+  legacyConfirmPaymentSchema,
+])
 
 // Capture request
 export const captureSchema = z.object({

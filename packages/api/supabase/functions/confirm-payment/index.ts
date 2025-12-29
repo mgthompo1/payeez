@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authenticateClientSecret } from '../_shared/auth.ts';
-import { decryptJson } from '../_shared/crypto.ts';
+import { fetchPSPCredentials } from '../_shared/psp.ts';
 import { createOrchestrator, type RouteDecision, type RetryContext } from '../_shared/orchestrator.ts';
 import { stripeAdapter } from '../_shared/adapters/stripe.ts';
 import { adyenAdapter } from '../_shared/adapters/adyen.ts';
@@ -259,6 +259,13 @@ serve(async (req) => {
             environment,
             supabase
           );
+          if (decision) {
+            await orchestrator.logForcedDecision(
+              routeContext,
+              decision.psp,
+              routingProfileId
+            );
+          }
         } else if (routingProfileId) {
           decision = await orchestrator.selectPSPWithProfile(
             routingProfileId,
@@ -319,10 +326,13 @@ serve(async (req) => {
           tenant_id: tenantId,
           token_id: token?.id,
           psp: decision.psp,
+          routing_profile_id: routingProfileId ?? decision.profileId ?? null,
           idempotency_key: idempotencyKey,
           amount: session.amount,
           currency: session.currency,
           status: 'pending',
+          captured_amount: 0,
+          refunded_amount: 0,
           payment_method_type: paymentMethodType,
           wallet_type: ['apple_pay', 'google_pay'].includes(paymentMethodType) ? paymentMethodType : null,
         })
@@ -364,6 +374,8 @@ serve(async (req) => {
           .update({
             status: result.status,
             psp_transaction_id: result.transactionId,
+            captured_amount: result.status === 'captured' ? session.amount : 0,
+            refunded_amount: 0,
             failure_code: result.failureCode,
             failure_message: result.failureMessage,
             failure_category: result.failureCategory,
@@ -418,6 +430,8 @@ serve(async (req) => {
               payment_method_type: paymentMethodType,
               psp: decision.psp,
               psp_transaction_id: result.transactionId,
+              captured_amount: result.status === 'captured' ? session.amount : 0,
+              refunded_amount: 0,
               card: result.card,
               wallet: ['apple_pay', 'google_pay'].includes(paymentMethodType)
                 ? { type: paymentMethodType, card_network: result.card?.brand }
@@ -499,25 +513,13 @@ async function getForcedDecision(
   environment: 'test' | 'live',
   supabase: any
 ): Promise<RouteDecision | null> {
-  const { data, error } = await supabase
-    .from('psp_credentials')
-    .select('credentials_encrypted')
-    .eq('tenant_id', tenantId)
-    .eq('psp', psp)
-    .eq('environment', environment)
-    .eq('is_active', true)
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  let credentials: Record<string, unknown> | null = null;
-  try {
-    credentials = await decryptJson(data.credentials_encrypted || '{}');
-  } catch (error) {
-    console.error('Failed to decrypt PSP credentials:', error);
-  }
+  const credentials = await fetchPSPCredentials(
+    supabase,
+    tenantId,
+    psp,
+    environment,
+    { logErrors: true }
+  );
   if (!credentials) {
     return null;
   }

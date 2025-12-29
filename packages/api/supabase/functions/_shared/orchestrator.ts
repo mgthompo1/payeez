@@ -5,6 +5,7 @@
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { decryptJson } from './crypto.ts';
+import { fetchPSPCredentials } from './psp.ts';
 
 export interface RouteContext {
   tenantId: string;
@@ -139,6 +140,20 @@ export class Orchestrator {
     if (!credentials) {
       return null;
     }
+
+    await this.logDecision({
+      tenantId: context.tenantId,
+      sessionId: context.sessionId,
+      profileId,
+      selectedPsp,
+      reason: 'weighted_random',
+      candidates,
+      isRetry: false,
+      amount: context.amount,
+      currency: context.currency,
+      paymentMethod: context.paymentMethod,
+      cardBrand: context.cardBrand,
+    });
 
     return {
       psp: selectedPsp,
@@ -477,22 +492,35 @@ export class Orchestrator {
     psp: string,
     environment: string
   ): Promise<Record<string, unknown> | null> {
-    const { data } = await this.supabase
-      .from('psp_credentials')
-      .select('credentials_encrypted')
-      .eq('tenant_id', tenantId)
-      .eq('psp', psp)
-      .eq('environment', environment)
-      .eq('is_active', true)
-      .single();
+    return await fetchPSPCredentials(
+      this.supabase,
+      tenantId,
+      psp,
+      environment
+    );
+  }
 
-    if (!data) return null;
-
-    try {
-      return await decryptJson(data.credentials_encrypted || '{}');
-    } catch {
-      return null;
-    }
+  /**
+   * Log a forced PSP selection for analytics
+   */
+  async logForcedDecision(
+    context: RouteContext,
+    psp: string,
+    profileId?: string
+  ): Promise<void> {
+    await this.logDecision({
+      tenantId: context.tenantId,
+      sessionId: context.sessionId,
+      profileId,
+      selectedPsp: psp,
+      reason: 'forced',
+      candidates: [{ psp, weight: 100 }],
+      isRetry: false,
+      amount: context.amount,
+      currency: context.currency,
+      paymentMethod: context.paymentMethod,
+      cardBrand: context.cardBrand,
+    });
   }
 
   /**
