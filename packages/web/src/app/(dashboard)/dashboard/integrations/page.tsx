@@ -13,20 +13,26 @@ export default function IntegrationsPage() {
     {
       name: 'WooCommerce',
       status: 'scaffold',
-      description: 'Drop-in gateway plugin with Payeez sessions + tokenization. Supports cards, Apple Pay, and Google Pay.',
-      path: 'packages/integrations/woocommerce',
+      description: 'Drop-in gateway plugin with Payeez sessions + tokenization. Supports cards, Apple Pay, Google Pay, and subscriptions.',
+      path: 'packages/integrations/payeez-woocommerce',
+    },
+    {
+      name: 'Salesforce Commerce Cloud',
+      status: 'scaffold',
+      description: 'SFRA cartridge with payment sessions, 3DS, webhooks, and saved cards for B2C Commerce.',
+      path: 'packages/integrations/payeez-salesforce-commerce-cloud',
+    },
+    {
+      name: 'Salesforce OMS',
+      status: 'scaffold',
+      description: 'Apex classes, LWC component, and webhooks for Salesforce Order Management payments.',
+      path: 'packages/integrations/payeez-salesforce-oms',
     },
     {
       name: 'Shopware 6',
       status: 'scaffold',
       description: 'Payment app scaffold with checkout and admin configuration for Payeez.',
       path: 'packages/integrations/shopware',
-    },
-    {
-      name: 'Salesforce Commerce Cloud',
-      status: 'planned',
-      description: 'Adapter scaffold for cartridge-based payments and hosted checkout.',
-      path: 'Coming soon',
     },
   ]
 
@@ -72,7 +78,7 @@ export default function IntegrationsPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {commerceIntegrations.map((integration) => (
             <div key={integration.name} className="rounded-xl border border-white/10 bg-[#0a0a0a] p-4 space-y-3">
               <div className="flex items-center justify-between">

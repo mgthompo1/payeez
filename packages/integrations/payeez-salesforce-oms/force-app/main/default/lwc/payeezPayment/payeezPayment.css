@@ -1,0 +1,12 @@
+.payeez-card-element {
+    padding: 12px;
+    border: 1px solid #dddbda;
+    border-radius: 4px;
+    background-color: #fff;
+    min-height: 44px;
+}
+
+.payeez-card-element:focus-within {
+    border-color: #1b96ff;
+    box-shadow: 0 0 3px #1b96ff;
+}

@@ -40,6 +40,31 @@ const statusStyles: Record<string, string> = {
   reconciled: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
 }
 
+const getToday = () => new Date().toISOString().slice(0, 10)
+
+const datePresets = [
+  { label: 'Today', getValue: () => ({ start: getToday(), end: getToday() }) },
+  { label: 'Yesterday', getValue: () => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    const v = d.toISOString().slice(0, 10)
+    return { start: v, end: v }
+  }},
+  { label: 'Last 7 days', getValue: () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 6)
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) }
+  }},
+  { label: 'Last 30 days', getValue: () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 29)
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) }
+  }},
+  { label: 'All time', getValue: () => ({ start: '', end: '' }) },
+]
+
 const toStartOfDayIso = (value: string) => {
   const date = new Date(value)
   date.setHours(0, 0, 0, 0)
@@ -60,8 +85,18 @@ export default function ReconciliationPage() {
   const [itemsLoading, setItemsLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [pspFilter, setPspFilter] = useState('all')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [datePreset, setDatePreset] = useState('Today')
+  const [startDate, setStartDate] = useState(getToday())
+  const [endDate, setEndDate] = useState(getToday())
+
+  useEffect(() => {
+    const preset = datePresets.find(p => p.label === datePreset)
+    if (preset && datePreset !== 'All time') {
+      const { start, end } = preset.getValue()
+      setStartDate(start)
+      setEndDate(end)
+    }
+  }, [datePreset])
 
   const formatAmount = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -165,7 +200,7 @@ export default function ReconciliationPage() {
           <Search className="h-4 w-4" />
           Filters
         </div>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
             <select
@@ -193,11 +228,23 @@ export default function ReconciliationPage() {
             </select>
           </div>
           <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Date preset</p>
+            <select
+              value={datePreset}
+              onChange={(e) => setDatePreset(e.target.value)}
+              className="h-10 w-full rounded-md border border-white/10 bg-[#0a0a0a] px-3 text-sm text-white"
+            >
+              {datePresets.map((preset) => (
+                <option key={preset.label} value={preset.label}>{preset.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-gray-500">Deposit start</p>
             <Input
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => { setStartDate(e.target.value); setDatePreset('All time') }}
               className="bg-[#0a0a0a] border-white/10 text-white"
             />
           </div>
@@ -206,7 +253,7 @@ export default function ReconciliationPage() {
             <Input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => { setEndDate(e.target.value); setDatePreset('All time') }}
               className="bg-[#0a0a0a] border-white/10 text-white"
             />
           </div>

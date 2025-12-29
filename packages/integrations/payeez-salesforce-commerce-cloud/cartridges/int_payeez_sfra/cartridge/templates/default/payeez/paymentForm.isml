@@ -1,0 +1,101 @@
+<isset name="payeezConfig" value="${require('*/cartridge/scripts/helpers/payeezHelper').getConfig()}" scope="page"/>
+
+<div class="payeez-payment-container" data-payeez-config='${JSON.stringify(payeezConfig)}'>
+
+    <isif condition="${payeezConfig.isTestMode}">
+        <div class="payeez-test-mode-badge">
+            <span class="badge badge-warning">Test Mode</span>
+        </div>
+    </isif>
+
+    <iscomment> Wallet Buttons </iscomment>
+    <div class="payeez-wallet-buttons">
+        <isif condition="${payeezConfig.applePayEnabled}">
+            <button type="button" id="payeez-apple-pay-button" class="btn payeez-apple-pay" style="display:none;">
+                <img src="${URLUtils.staticURL('/images/apple-pay-mark.svg')}" alt="Apple Pay" />
+            </button>
+        </isif>
+        <isif condition="${payeezConfig.googlePayEnabled}">
+            <button type="button" id="payeez-google-pay-button" class="btn payeez-google-pay" style="display:none;">
+                <img src="${URLUtils.staticURL('/images/google-pay-mark.svg')}" alt="Google Pay" />
+            </button>
+        </isif>
+    </div>
+
+    <isif condition="${payeezConfig.applePayEnabled || payeezConfig.googlePayEnabled}">
+        <div class="payeez-divider">
+            <span>${Resource.msg('label.or', 'payeez', null)}</span>
+        </div>
+    </isif>
+
+    <iscomment> Saved Cards </iscomment>
+    <isif condition="${pdict.customer.authenticated && pdict.savedCards && pdict.savedCards.length > 0}">
+        <div class="payeez-saved-cards">
+            <h4>${Resource.msg('label.saved.cards', 'payeez', null)}</h4>
+            <isloop items="${pdict.savedCards}" var="card" status="cardStatus">
+                <div class="form-check saved-card-option">
+                    <input
+                        type="radio"
+                        class="form-check-input"
+                        name="payeez-saved-card"
+                        id="saved-card-${card.id}"
+                        value="${card.id}"
+                        <isif condition="${cardStatus.first}">checked</isif>
+                    />
+                    <label class="form-check-label" for="saved-card-${card.id}">
+                        <span class="card-brand">${card.brand}</span>
+                        <span class="card-last4">•••• ${card.last4}</span>
+                        <span class="card-expiry">${card.expiryMonth}/${card.expiryYear}</span>
+                    </label>
+                </div>
+            </isloop>
+            <div class="form-check saved-card-option">
+                <input
+                    type="radio"
+                    class="form-check-input"
+                    name="payeez-saved-card"
+                    id="saved-card-new"
+                    value="new"
+                />
+                <label class="form-check-label" for="saved-card-new">
+                    ${Resource.msg('label.new.card', 'payeez', null)}
+                </label>
+            </div>
+        </div>
+    </isif>
+
+    <iscomment> Card Element </iscomment>
+    <div class="payeez-card-form" id="payeez-card-form">
+        <div class="form-group">
+            <label for="payeez-card-element">${Resource.msg('label.card.details', 'payeez', null)}</label>
+            <div id="payeez-card-element" class="payeez-card-element">
+                <iscomment> Payeez Card Element mounts here </iscomment>
+            </div>
+            <div id="payeez-card-errors" class="invalid-feedback" role="alert"></div>
+        </div>
+
+        <isif condition="${pdict.customer.authenticated}">
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="payeez-save-card" name="payeez-save-card" />
+                    <label class="form-check-label" for="payeez-save-card">
+                        ${Resource.msg('label.save.card', 'payeez', null)}
+                    </label>
+                </div>
+            </div>
+        </isif>
+    </div>
+
+    <iscomment> Payment Errors </iscomment>
+    <div id="payeez-payment-errors" class="alert alert-danger" style="display:none;"></div>
+
+    <iscomment> Hidden Inputs </iscomment>
+    <input type="hidden" id="payeez-session-id" name="payeez-session-id" value="" />
+    <input type="hidden" id="payeez-transaction-id" name="payeez-transaction-id" value="" />
+    <input type="hidden" id="payeez-payment-method-id" name="payeez-payment-method-id" value="" />
+</div>
+
+<script>
+    window.payeezConfig = <isprint value="${JSON.stringify(payeezConfig)}" encoding="off"/>;
+    window.payeezConfig.createSessionUrl = '${URLUtils.url('Payeez-CreateSession')}';
+</script>

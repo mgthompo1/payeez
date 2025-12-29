@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,31 @@ const reportLabels: Record<ReportType, string> = {
   refunds: 'Refunds',
   settlements: 'Settlements',
 }
+
+const getToday = () => new Date().toISOString().slice(0, 10)
+
+const datePresets = [
+  { label: 'Today', getValue: () => ({ start: getToday(), end: getToday() }) },
+  { label: 'Yesterday', getValue: () => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    const v = d.toISOString().slice(0, 10)
+    return { start: v, end: v }
+  }},
+  { label: 'Last 7 days', getValue: () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 6)
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) }
+  }},
+  { label: 'Last 30 days', getValue: () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 29)
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) }
+  }},
+  { label: 'Custom', getValue: () => ({ start: '', end: '' }) },
+]
 
 function escapeCsv(value: unknown) {
   if (value === null || value === undefined) {
@@ -40,10 +65,20 @@ function toEndOfDayIso(value: string) {
 
 export default function ReportsPage() {
   const [reportType, setReportType] = useState<ReportType>('transactions')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [datePreset, setDatePreset] = useState('Today')
+  const [startDate, setStartDate] = useState(getToday())
+  const [endDate, setEndDate] = useState(getToday())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const preset = datePresets.find(p => p.label === datePreset)
+    if (preset && datePreset !== 'Custom') {
+      const { start, end } = preset.getValue()
+      setStartDate(start)
+      setEndDate(end)
+    }
+  }, [datePreset])
 
   const downloadCsv = (filename: string, csv: string) => {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -231,7 +266,7 @@ export default function ReportsPage() {
       </div>
 
       <div className="rounded-2xl bg-[#111] border border-white/10 p-6 space-y-4">
-        <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
+        <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-gray-500">Report type</p>
             <select
@@ -245,18 +280,30 @@ export default function ReportsPage() {
             </select>
           </div>
           <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Date preset</p>
+            <select
+              value={datePreset}
+              onChange={(e) => setDatePreset(e.target.value)}
+              className="h-10 w-full rounded-md border border-white/10 bg-[#0a0a0a] px-3 text-sm text-white"
+            >
+              {datePresets.map((preset) => (
+                <option key={preset.label} value={preset.label}>{preset.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-gray-500">Date range</p>
             <div className="grid grid-cols-2 gap-2">
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => { setStartDate(e.target.value); setDatePreset('Custom') }}
                 className="bg-[#0a0a0a] border-white/10 text-white"
               />
               <Input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => { setEndDate(e.target.value); setDatePreset('Custom') }}
                 className="bg-[#0a0a0a] border-white/10 text-white"
               />
             </div>

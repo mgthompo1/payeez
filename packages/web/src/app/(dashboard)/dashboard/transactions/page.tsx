@@ -1,20 +1,55 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Search, Download, Filter, CreditCard, RefreshCw } from 'lucide-react'
 
+const getToday = () => new Date().toISOString().slice(0, 10)
+
+const datePresets = [
+  { label: 'Today', getValue: () => ({ start: getToday(), end: getToday() }) },
+  { label: 'Yesterday', getValue: () => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    const v = d.toISOString().slice(0, 10)
+    return { start: v, end: v }
+  }},
+  { label: 'Last 7 days', getValue: () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 6)
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) }
+  }},
+  { label: 'Last 30 days', getValue: () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 29)
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) }
+  }},
+  { label: 'Custom', getValue: () => ({ start: '', end: '' }) },
+]
+
 export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [attemptStart, setAttemptStart] = useState('')
-  const [attemptEnd, setAttemptEnd] = useState('')
+  const [datePreset, setDatePreset] = useState('Today')
+  const [attemptStart, setAttemptStart] = useState(getToday())
+  const [attemptEnd, setAttemptEnd] = useState(getToday())
   const [sessionStart, setSessionStart] = useState('')
   const [sessionEnd, setSessionEnd] = useState('')
+
+  useEffect(() => {
+    const preset = datePresets.find(p => p.label === datePreset)
+    if (preset && datePreset !== 'Custom') {
+      const { start, end } = preset.getValue()
+      setAttemptStart(start)
+      setAttemptEnd(end)
+    }
+  }, [datePreset])
 
   const toStartOfDayIso = (value: string) => {
     const date = new Date(value)
@@ -158,20 +193,32 @@ export default function TransactionsPage() {
             )}
           </Button>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Date range</p>
+              <select
+                value={datePreset}
+                onChange={(e) => setDatePreset(e.target.value)}
+                className="h-10 w-full rounded-md border border-white/10 bg-[#0a0a0a] px-3 text-sm text-white"
+              >
+                {datePresets.map((preset) => (
+                  <option key={preset.label} value={preset.label}>{preset.label}</option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-wide text-gray-500">Attempt date</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input
                   type="date"
                   value={attemptStart}
-                  onChange={(e) => setAttemptStart(e.target.value)}
+                  onChange={(e) => { setAttemptStart(e.target.value); setDatePreset('Custom') }}
                   className="bg-[#0a0a0a] border-white/10 text-white"
                 />
                 <Input
                   type="date"
                   value={attemptEnd}
-                  onChange={(e) => setAttemptEnd(e.target.value)}
+                  onChange={(e) => { setAttemptEnd(e.target.value); setDatePreset('Custom') }}
                   className="bg-[#0a0a0a] border-white/10 text-white"
                 />
               </div>

@@ -1,0 +1,19 @@
+{
+  "packageDirectories": [
+    {
+      "path": "force-app",
+      "default": true,
+      "package": "Payeez OMS",
+      "versionName": "ver 1.0",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Payeez Payment Orchestration for Salesforce Order Management"
+    }
+  ],
+  "name": "payeez-salesforce-oms",
+  "namespace": "",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "59.0",
+  "plugins": {
+    "unflaggedMetadataRecovery": true
+  }
+}
