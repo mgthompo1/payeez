@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { acceptInvite } from './actions'
 
-export default async function InvitePage({ params }: { params: { token: string } }) {
+export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -17,10 +18,10 @@ export default async function InvitePage({ params }: { params: { token: string }
           </p>
           <div className="flex justify-center gap-3">
             <Button asChild className="bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90">
-              <Link href={`/login?invite=${params.token}`}>Sign in</Link>
+              <Link href={`/login?invite=${token}`}>Sign in</Link>
             </Button>
             <Button variant="outline" asChild className="border-white/10 text-gray-300 hover:bg-white/5">
-              <Link href={`/signup?invite=${params.token}`}>Create account</Link>
+              <Link href={`/signup?invite=${token}`}>Create account</Link>
             </Button>
           </div>
         </div>
@@ -36,7 +37,7 @@ export default async function InvitePage({ params }: { params: { token: string }
           You are signed in as {user.email}. Continue to join this workspace.
         </p>
         <form action={acceptInvite}>
-          <input type="hidden" name="token" value={params.token} />
+          <input type="hidden" name="token" value={token} />
           <Button type="submit" className="w-full bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90">
             Accept invite
           </Button>

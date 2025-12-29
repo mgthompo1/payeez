@@ -3,7 +3,10 @@
   publish = ".next"
 
 [build.environment]
-  NEXT_PRIVATE_STANDALONE = "true"
+  NETLIFY_BLOBS_ENABLED = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"
