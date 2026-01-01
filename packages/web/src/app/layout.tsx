@@ -17,7 +17,7 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Payeez",
-  description: "Payment orchestration control plane for modern teams.",
+  description: "Smart payment routing across every processor. One API, any PSP.",
   icons: {
     icon: "/icon.svg",
   },

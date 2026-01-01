@@ -13,10 +13,17 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-adyen-hmac-signature',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+import { buildCorsHeaders } from '../_shared/auth.ts'
+
+// Webhook-specific allowed headers (includes PSP signature headers)
+function getWebhookCorsHeaders(requestOrigin: string | null): Record<string, string> {
+  const baseHeaders = buildCorsHeaders(requestOrigin);
+  // Webhooks come from PSP servers, not browsers - but we still want proper CORS for any browser-based testing
+  return {
+    ...baseHeaders,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-adyen-hmac-signature',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
 }
 
 interface NormalizedWebhookEvent {
@@ -58,14 +65,33 @@ function verifyStripeSignature(payload: string, signature: string, secret: strin
 }
 
 /**
- * Verify Adyen webhook signature
+ * Verify Adyen webhook signature using timing-safe comparison
+ * Prevents timing attacks by ensuring constant-time comparison
  */
 function verifyAdyenSignature(payload: string, signature: string, secret: string): boolean {
-  const expectedSig = createHmac('sha256', Buffer.from(secret, 'hex'))
-    .update(payload)
-    .digest('base64')
+  if (!signature || !secret) {
+    return false;
+  }
 
-  return signature === expectedSig
+  try {
+    const expectedSig = createHmac('sha256', Buffer.from(secret, 'hex'))
+      .update(payload)
+      .digest('base64');
+
+    // Use timing-safe comparison to prevent timing attacks
+    const sigBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expectedSig);
+
+    // Buffers must be same length for timingSafeEqual
+    if (sigBuffer.length !== expectedBuffer.length) {
+      return false;
+    }
+
+    return timingSafeEqual(sigBuffer, expectedBuffer);
+  } catch (error) {
+    console.error('[Security] Adyen signature verification error:', error);
+    return false;
+  }
 }
 
 /**
@@ -175,6 +201,9 @@ async function forwardToMerchant(
 }
 
 serve(async (req) => {
+  const requestOrigin = req.headers.get('origin');
+  const corsHeaders = getWebhookCorsHeaders(requestOrigin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -199,7 +228,9 @@ serve(async (req) => {
     let signatureValid = false
     let normalizedEvent: NormalizedWebhookEvent
 
-    const enforceSignatures = Deno.env.get('PAYEEZ_ENFORCE_WEBHOOK_SIGNATURES') === 'true'
+    // SECURITY: Default to enforcing signatures in production
+    // Set PAYEEZ_ENFORCE_WEBHOOK_SIGNATURES=false only for local development
+    const enforceSignatures = Deno.env.get('PAYEEZ_ENFORCE_WEBHOOK_SIGNATURES') !== 'false'
 
     switch (psp) {
       case 'stripe':
@@ -238,11 +269,9 @@ serve(async (req) => {
         )
     }
 
-    // Log signature verification result (but don't block in dev)
-    if (!signatureValid) {
-      console.warn(`Webhook signature verification failed for ${psp}`)
-      // In production, you might want to reject here:
-      // return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 401 })
+    // Log signature verification result for monitoring
+    if (!signatureValid && !enforceSignatures) {
+      console.warn(`[Security] Webhook signature verification failed for ${psp} (enforcement disabled)`);
     }
 
     // Find the session/tenant from the transaction ID

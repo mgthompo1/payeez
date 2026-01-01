@@ -86,7 +86,7 @@ export default function HomePage() {
             />
             <div className="leading-tight">
               <div className="text-sm tracking-[0.2em] text-[#c8ff5a]/80 uppercase">Payeez</div>
-              <div className="text-xs text-[#8ba3b7]">Payments Control Plane</div>
+              <div className="text-xs text-[#8ba3b7]">Payment Orchestration</div>
             </div>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-[#9bb0c2]">
@@ -112,7 +112,7 @@ export default function HomePage() {
             <div className="space-y-8">
               <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-[#9bb0c2] fade-up">
                 <span className="h-2 w-2 rounded-full bg-[#19d1c3] shadow-[0_0_12px_#19d1c3]" />
-                Control-plane ready
+                9 processors live
               </div>
 
               <div className="space-y-6">
@@ -222,11 +222,11 @@ export default function HomePage() {
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="space-y-3">
               <p className="text-xs uppercase tracking-[0.3em] text-[#8ba3b7]">Capabilities</p>
-              <h2 className="text-3xl md:text-4xl font-semibold">A control plane, not just a gateway.</h2>
+              <h2 className="text-3xl md:text-4xl font-semibold">More than a gateway. Smarter routing.</h2>
             </div>
             <p className="text-[#9bb0c2] max-w-xl">
-              Orchestrate every transaction with deterministic routing, resilient capture,
-              and observability built into the flow.
+              Route every transaction with intelligent rules, automatic failover,
+              and real-time visibility across all your processors.
             </p>
           </div>
 
@@ -336,9 +336,9 @@ export default function HomePage() {
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#19d1c3]/20 via-[#0f1621] to-[#c8ff5a]/20 p-12 text-center">
             <div className="absolute inset-0 bg-grid-tech opacity-30" />
             <div className="relative space-y-6">
-              <h2 className="text-3xl md:text-5xl font-semibold">Run payment routing like an SRE team.</h2>
+              <h2 className="text-3xl md:text-5xl font-semibold">Start routing payments in minutes.</h2>
               <p className="text-[#9bb0c2] max-w-2xl mx-auto">
-                Launch with a sandbox in minutes, move to live once your routing rules are dialed in.
+                Launch with a sandbox today, go live when your routing rules are ready.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button size="lg" asChild className="h-12 rounded-full bg-[#c8ff5a] text-[#081014] hover:bg-[#d9ff7a]">
@@ -370,7 +370,7 @@ export default function HomePage() {
               <span className="text-sm tracking-[0.3em] uppercase text-[#9bb0c2]">Payeez</span>
             </div>
             <p className="text-sm text-[#9bb0c2]">
-              Payment orchestration control plane for teams that need deterministic routing.
+              Smart payment routing for teams who want control over every transaction.
             </p>
           </div>
           <div>

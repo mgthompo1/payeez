@@ -3,10 +3,23 @@
 // Alternative vault provider to Basis Theory
 // ============================================
 
+/**
+ * VGS Authentication Configuration
+ * Supports both OAuth (preferred) and Basic Auth (legacy)
+ */
+export interface VGSAuthConfig {
+  type: 'oauth' | 'basic';
+  // OAuth credentials
+  clientId?: string;
+  clientSecret?: string;
+  // Legacy Basic auth (deprecated - migrate to OAuth)
+  accessCredentials?: string;
+}
+
 export interface VGSConfig {
   vaultId: string;
   environment: 'sandbox' | 'live';
-  accessCredentials: string; // base64 encoded username:password
+  auth: VGSAuthConfig;
 }
 
 export interface VGSTokenizeResponse {
@@ -17,29 +30,106 @@ export interface VGSTokenizeResponse {
   expYear?: number;
 }
 
+// Token cache for OAuth tokens
+interface CachedToken {
+  accessToken: string;
+  expiresAt: number;
+}
+
+let tokenCache: CachedToken | null = null;
+
 /**
  * VGS Vault Adapter
  * Handles card tokenization and proxy requests through VGS
+ * Uses OAuth for authentication (preferred) or Basic Auth (legacy)
  */
 export class VGSVault {
   private config: VGSConfig;
   private baseUrl: string;
+  private oauthBaseUrl: string;
 
   constructor(config: VGSConfig) {
     this.config = config;
     this.baseUrl = config.environment === 'live'
       ? `https://${config.vaultId}.live.verygoodproxy.com`
       : `https://${config.vaultId}.sandbox.verygoodproxy.com`;
+    this.oauthBaseUrl = config.environment === 'live'
+      ? 'https://auth.verygoodsecurity.com'
+      : 'https://auth.sandbox.verygoodsecurity.com';
+  }
+
+  /**
+   * Get OAuth access token with caching
+   * Tokens are cached until 5 minutes before expiry
+   */
+  private async getOAuthToken(): Promise<string> {
+    const auth = this.config.auth;
+
+    if (auth.type !== 'oauth' || !auth.clientId || !auth.clientSecret) {
+      throw new Error('[Security] OAuth credentials not configured');
+    }
+
+    // Check cache (with 5 minute buffer before expiry)
+    const now = Date.now();
+    if (tokenCache && tokenCache.expiresAt > now + 300000) {
+      return tokenCache.accessToken;
+    }
+
+    // Request new token
+    const response = await fetch(`${this.oauthBaseUrl}/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: auth.clientId,
+        client_secret: auth.clientSecret,
+        scope: 'vault-api:all',
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[Security] VGS OAuth token request failed:', response.status);
+      throw new Error('VGS authentication failed');
+    }
+
+    const tokenData = await response.json();
+
+    // Cache the token
+    tokenCache = {
+      accessToken: tokenData.access_token,
+      expiresAt: now + (tokenData.expires_in * 1000),
+    };
+
+    return tokenCache.accessToken;
   }
 
   /**
    * Get headers for VGS API requests
+   * Uses OAuth Bearer token (preferred) or Basic Auth (legacy)
    */
-  private getHeaders(): Record<string, string> {
-    return {
-      'Authorization': `Basic ${this.config.accessCredentials}`,
-      'Content-Type': 'application/json',
-    };
+  private async getHeaders(): Promise<Record<string, string>> {
+    const auth = this.config.auth;
+
+    if (auth.type === 'oauth') {
+      const token = await this.getOAuthToken();
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+    }
+
+    // Legacy Basic auth - log deprecation warning
+    if (auth.accessCredentials) {
+      console.warn('[Security] VGS Basic auth is deprecated. Migrate to OAuth authentication.');
+      return {
+        'Authorization': `Basic ${auth.accessCredentials}`,
+        'Content-Type': 'application/json',
+      };
+    }
+
+    throw new Error('[Security] No valid VGS authentication configured');
   }
 
   /**
@@ -56,10 +146,12 @@ export class VGSVault {
     // VGS uses aliases - card data is already tokenized by VGS Collect
     // The "number" field contains the VGS alias, not the actual card number
 
+    const headers = await this.getHeaders();
+
     // Redact sensitive data and get alias
     const response = await fetch(`${this.baseUrl}/post`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers,
       body: JSON.stringify({
         card: {
           number: cardData.number,
@@ -102,11 +194,12 @@ export class VGSVault {
   ): Promise<Response> {
     // VGS inbound proxy - replace aliases with actual data
     const proxyUrl = `${this.baseUrl}/proxy`;
+    const authHeaders = await this.getHeaders();
 
     const response = await fetch(proxyUrl, {
       method,
       headers: {
-        ...this.getHeaders(),
+        ...authHeaders,
         ...headers,
         'X-VGS-Target-URL': targetUrl,
       },
@@ -120,10 +213,12 @@ export class VGSVault {
    * Reveal tokenized data (for authorized use only)
    */
   async reveal(alias: string): Promise<{ number: string; expMonth: string; expYear: string }> {
+    const headers = await this.getHeaders();
+
     // VGS reveal endpoint
     const response = await fetch(`${this.baseUrl}/reveal`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers,
       body: JSON.stringify({ alias }),
     });
 
@@ -138,9 +233,11 @@ export class VGSVault {
    * Delete a token/alias
    */
   async deleteToken(alias: string): Promise<void> {
+    const headers = await this.getHeaders();
+
     const response = await fetch(`${this.baseUrl}/aliases/${alias}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers,
     });
 
     if (!response.ok && response.status !== 404) {
@@ -161,10 +258,57 @@ export class VGSVault {
 }
 
 /**
- * Create VGS vault instance
+ * Create VGS vault instance with OAuth authentication (preferred)
  */
 export function createVGSVault(config: VGSConfig): VGSVault {
   return new VGSVault(config);
+}
+
+/**
+ * Legacy config format (deprecated)
+ * @deprecated Use createVGSVault with OAuth config instead
+ */
+export interface LegacyVGSConfig {
+  vaultId: string;
+  environment: 'sandbox' | 'live';
+  accessCredentials: string;
+}
+
+/**
+ * Create VGS vault from legacy Basic Auth config
+ * @deprecated Migrate to OAuth authentication
+ */
+export function createVGSVaultFromLegacy(legacyConfig: LegacyVGSConfig): VGSVault {
+  console.warn('[Security] createVGSVaultFromLegacy is deprecated. Migrate to OAuth authentication.');
+  return new VGSVault({
+    vaultId: legacyConfig.vaultId,
+    environment: legacyConfig.environment,
+    auth: {
+      type: 'basic',
+      accessCredentials: legacyConfig.accessCredentials,
+    },
+  });
+}
+
+/**
+ * Create VGS vault with OAuth authentication
+ * This is the recommended way to create a VGS vault instance
+ */
+export function createVGSVaultWithOAuth(options: {
+  vaultId: string;
+  environment: 'sandbox' | 'live';
+  clientId: string;
+  clientSecret: string;
+}): VGSVault {
+  return new VGSVault({
+    vaultId: options.vaultId,
+    environment: options.environment,
+    auth: {
+      type: 'oauth',
+      clientId: options.clientId,
+      clientSecret: options.clientSecret,
+    },
+  });
 }
 
 /**

@@ -980,12 +980,72 @@ function loadVGSScript(): Promise<void> {
 // 3D Secure Handling
 // ============================================
 
+/**
+ * Allowed origins for 3DS challenge URLs
+ * Only trusted 3DS providers and card network domains are permitted
+ */
+const ALLOWED_3DS_ORIGINS = [
+  // Card networks
+  'https://centinelapi.cardinalcommerce.com',
+  'https://3ds.stripe.com',
+  'https://3d-secure.adyen.com',
+  'https://acs.cardinalcommerce.com',
+  // Visa
+  'https://3dsecure.visa.com',
+  'https://secure.visa.com',
+  // Mastercard
+  'https://3dsecure.mastercard.com',
+  'https://secure.mastercard.com',
+  // Amex
+  'https://americanexpress.com',
+  // Common 3DS providers
+  'https://3ds2.stripe.com',
+  'https://hooks.stripe.com',
+  'https://checkout.stripe.com',
+  'https://ca-live.adyen.com',
+  'https://ca-test.adyen.com',
+  'https://pal-live.adyen.com',
+  'https://pal-test.adyen.com',
+];
+
+/**
+ * Validate that a 3DS challenge URL is from a trusted origin
+ */
+function isValidThreeDSOrigin(url: string): boolean {
+  try {
+    const parsedUrl = new URL(url);
+    const origin = parsedUrl.origin;
+
+    // Check against allowlist
+    if (ALLOWED_3DS_ORIGINS.some(allowed => origin.startsWith(allowed) || origin === allowed)) {
+      return true;
+    }
+
+    // Also allow if origin matches our API base (for custom 3DS handling)
+    if (origin === new URL(globalConfig.apiBase).origin) {
+      return true;
+    }
+
+    console.warn(`[Security] Blocked 3DS challenge from untrusted origin: ${origin}`);
+    return false;
+  } catch {
+    console.error('[Security] Invalid 3DS challenge URL:', url);
+    return false;
+  }
+}
+
 async function handle3DSChallenge(
   sessionId: string,
   challengeUrl: string,
   containerId?: string
 ): Promise<ThreeDSResult> {
   return new Promise((resolve, reject) => {
+    // SECURITY: Validate challenge URL origin before loading in iframe
+    if (!isValidThreeDSOrigin(challengeUrl)) {
+      reject(createError('3DS_ERROR', 'Invalid 3DS challenge URL origin'));
+      return;
+    }
+
     // Create iframe for challenge
     const container = containerId
       ? document.getElementById(containerId)
@@ -1023,6 +1083,8 @@ async function handle3DSChallenge(
     `;
 
     const iframe = document.createElement('iframe');
+    // Add security attributes to iframe
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
     iframe.src = challengeUrl;
     iframe.style.cssText = `
       width: 100%;
@@ -1036,6 +1098,12 @@ async function handle3DSChallenge(
 
     // Listen for 3DS completion message
     const messageHandler = async (event: MessageEvent) => {
+      // SECURITY: Validate message origin before processing
+      if (!isValidThreeDSOrigin(event.origin) && event.origin !== new URL(globalConfig.apiBase).origin) {
+        // Silently ignore messages from untrusted origins
+        return;
+      }
+
       if (event.data?.type === 'payeez-3ds-complete') {
         window.removeEventListener('message', messageHandler);
         overlay.remove();

@@ -6,8 +6,70 @@ export interface AuthResult {
   apiKeyId?: string;
 }
 
+/**
+ * Get allowed origins from environment variable
+ * Defaults to empty array (no origins allowed) if not set
+ * Set PAYEEZ_ALLOWED_ORIGINS as comma-separated list: "https://app.example.com,https://checkout.example.com"
+ */
+function getAllowedOrigins(): string[] {
+  const origins = Deno.env.get('PAYEEZ_ALLOWED_ORIGINS');
+  if (!origins) {
+    return [];
+  }
+  return origins.split(',').map(o => o.trim()).filter(Boolean);
+}
+
+/**
+ * Validate and return CORS origin header
+ * Only allows origins explicitly listed in PAYEEZ_ALLOWED_ORIGINS
+ */
+export function getCorsOrigin(requestOrigin: string | null): string | null {
+  if (!requestOrigin) return null;
+
+  const allowedOrigins = getAllowedOrigins();
+
+  // In development/testing, allow localhost if explicitly configured
+  if (allowedOrigins.length === 0) {
+    console.warn('[Security] PAYEEZ_ALLOWED_ORIGINS not configured - CORS will block requests');
+    return null;
+  }
+
+  if (allowedOrigins.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  // Log blocked origin attempts for security monitoring
+  console.warn(`[Security] CORS blocked origin: ${requestOrigin}`);
+  return null;
+}
+
+/**
+ * Build CORS headers for a specific request
+ * Uses origin validation instead of wildcard
+ */
+export function buildCorsHeaders(requestOrigin: string | null): Record<string, string> {
+  const allowedOrigin = getCorsOrigin(requestOrigin);
+
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-idempotency-key, idempotency-key',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+
+  if (allowedOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+    headers['Vary'] = 'Origin';
+  }
+
+  return headers;
+}
+
+/**
+ * @deprecated Use buildCorsHeaders(request.headers.get('origin')) instead
+ * Kept for backwards compatibility during migration
+ */
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('PAYEEZ_ALLOWED_ORIGINS')?.split(',')[0] || '',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-idempotency-key, idempotency-key',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
