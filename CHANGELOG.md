@@ -114,6 +114,194 @@ packages/api/src/lib/vault/
 
 ---
 
+#### A2A/ACH Bank Payments
+
+**Complete Account-to-Account payment infrastructure:**
+
+- **Bank Account Management**
+  - Vaulted bank account storage (AES-256-GCM encryption)
+  - ABA routing number validation with checksum
+  - IBAN validation (MOD-97) for EU
+  - UK sort code, Australian BSB, NZ/CA support
+  - Duplicate detection via secure hashing
+  - Bank name lookup from routing prefixes
+
+- **Verification Flows**
+  - Micro-deposit verification (two small deposits 1-99 cents)
+  - Manual verification for B2B/trusted flows
+  - Attempt limiting and expiry handling
+  - Status tracking: `unverified` → `pending` → `verified`/`failed`
+
+- **Settlement Providers**
+  - **NACHA File Generator** - Full ACH file format
+    - File/batch/entry records per NACHA spec
+    - SEC codes: PPD, CCD, WEB, TEL, CTX
+    - Prenote generation for account validation
+    - Batch management and submission tracking
+  - **Stripe ACH Adapter** - Leverage Stripe's rails
+    - Payment method creation from vaulted data
+    - PaymentIntent-based transfers
+    - Webhook handling for status updates
+    - Micro-deposit verification via Stripe
+
+- **Risk-Based Transfer Validation**
+  - Velocity limits (daily/monthly count and amount)
+  - Negative account list checking
+  - Mandate limit enforcement
+  - Return history analysis
+  - First transfer detection and restrictions
+  - Risk scoring with approve/review/block recommendations
+
+- **Mandates (Authorization Proof)**
+  - Per-transfer, daily, and monthly limits
+  - Expiration support
+  - Signed authorization tracking
+  - IP and user agent capture
+
+- **Bank Transfers API**
+  - Debit and credit directions
+  - Idempotency key support
+  - Status lifecycle: `pending` → `processing` → `settled`/`failed`/`returned`
+  - ACH return code handling with recommended actions
+
+- **Dashboard UI**
+  - Bank accounts list with search and filtering
+  - Verification status badges
+  - Account detail sheet with transfer history
+  - Micro-deposit verification modal
+  - Add bank account form with real-time validation
+
+- **UI Components** (`@atlas/elements`)
+  - `RoutingNumberInput` - Auto-format, validation, bank name display
+  - `AccountNumberInput` - Masked display, length validation
+  - `BankAccountForm` - Complete form with account type selection
+  - `MicrodepositVerification` - Two-amount entry with attempts
+  - `BankAccountCard` - Display card with status and actions
+
+### Files Added
+
+```
+packages/api/supabase/migrations/
+└── 00024_bank_accounts_ach.sql    # Complete schema
+
+packages/api/src/lib/bank/
+├── index.ts                        # Module exports
+├── types.ts                        # TypeScript interfaces
+├── vault.ts                        # Encryption/decryption
+├── verification/
+│   └── microdeposit.ts            # Micro-deposit flow
+├── settlement/
+│   ├── nacha.ts                   # NACHA file generator
+│   └── stripe-ach.ts              # Stripe ACH adapter
+└── risk/
+    ├── aba.ts                     # Routing validation
+    └── validation.ts              # Risk assessment
+
+packages/api/supabase/functions/
+├── bank-accounts/index.ts         # Bank accounts API
+└── bank-transfers/index.ts        # Transfers API
+
+packages/web/src/components/bank/
+├── index.ts                       # Component exports
+├── utils.ts                       # Validation utilities
+├── RoutingNumberInput.tsx         # Routing number input
+├── AccountNumberInput.tsx         # Account number input
+├── BankAccountForm.tsx            # Complete form
+├── MicrodepositVerification.tsx   # Verification UI
+└── BankAccountCard.tsx            # Account display card
+
+packages/web/src/app/(dashboard)/dashboard/bank-accounts/
+└── page.tsx                       # Dashboard page
+```
+
+#### Bank Module Enhancements (Platform-Grade)
+
+Based on architecture review, added enterprise-ready abstractions:
+
+- **Settlement Strategy Engine**
+  - Cost/speed/liability-based rail selection
+  - Pre-configured strategies: NACHA, Stripe ACH, Dwolla, RTP, FedNow
+  - UK/EU strategies: Faster Payments, BACS, SEPA, SEPA Instant
+  - AU/NZ/CA strategies: NPP, EFT
+  - Cost estimation across all eligible rails
+  - `selectSettlementStrategy()` with priority (cost/speed/reliability)
+
+- **Account Capability Flags**
+  - Per-account `can_debit`/`can_credit` detection
+  - `supported_rails` array based on country + verification
+  - `verification_level`: none → basic → verified → enhanced
+  - Account restrictions: `no_debits`, `instant_blocked`, `review_required`, etc.
+  - Auto-detection from verification status and return history
+  - `canPerformTransfer()` validation helper
+
+- **Verification Provider Abstraction**
+  - Pluggable interface like vault providers
+  - `VerificationProvider` interface with `initiate()`, `complete()`, `getStatus()`
+  - Built-in providers: `manual`, `microdeposit`
+  - Stub providers for: `plaid`, `finicity`, `tink`, `truelayer`
+  - Auto-registration based on environment variables
+  - Supports OAuth redirect flows and embedded widgets
+
+- **Enhanced Mandate Engine**
+  - `scope`: single, recurring, standing, blanket
+  - `rail`: Links mandate to specific settlement type
+  - `revocable`: Account holder cancellation rights
+  - Enhanced limits: daily, weekly, monthly, yearly, lifetime
+  - Schedule support for recurring mandates
+  - `authorization` block: signed_at, consent_text, signature_type, evidence
+  - Rail-specific IDs: SEPA mandate ID, BACS DDI reference
+  - `validateMandateForTransfer()` with remaining limits
+  - SEPA mandate XML generation
+
+### Files Added
+
+```
+packages/api/src/lib/bank/
+├── settlement/strategy.ts         # Settlement strategy engine
+├── capabilities.ts                # Account capability detection
+├── verification/index.ts          # Verification provider abstraction
+└── mandate.ts                     # Enhanced mandate engine
+
+packages/api/supabase/migrations/
+└── 00025_bank_enhancements.sql    # Schema for capabilities, strategies, verification sessions
+```
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Transfer Request                          │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Account Capabilities                                        │
+│  can_debit? supported_rails? restrictions?                   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Mandate Validation                                          │
+│  scope? limits? schedule? authorization?                     │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Settlement Strategy Selection                               │
+│  priority: cost | speed | reliability                        │
+│  → NACHA ($0.25, 3 days)                                    │
+│  → RTP ($1.00, instant)                                     │
+│  → Stripe ACH (0.8%, 4 days)                                │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Risk Assessment → Execute Transfer                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## [1.1.0] - 2026-01-09
 
 ### Added

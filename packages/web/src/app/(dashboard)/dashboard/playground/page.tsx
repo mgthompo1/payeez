@@ -12,7 +12,6 @@ export default function PlaygroundPage() {
   const [token, setToken] = useState<any>(null)
   const [logs, setLogs] = useState<string[]>([])
   
-  // Form state
   const [pan, setPan] = useState('')
   const [expiry, setExpiry] = useState('')
   const [cvc, setCvc] = useState('')
@@ -25,17 +24,13 @@ export default function PlaygroundPage() {
     e.preventDefault()
     setLoading(true)
     setToken(null)
-    setLogs([]) // Clear previous logs
+    setLogs([])
     
     addLog('Initializing secure session...')
-    
-    // Simulate network delay
     setTimeout(() => {
       addLog('Secure Frame: Capturing card data...')
-      
       setTimeout(() => {
         addLog('Vault: Encrypting sensitive fields (AES-256-GCM)...')
-        
         setTimeout(() => {
           const newToken = {
             id: `tok_${Math.random().toString(36).substring(2, 10)}`,
@@ -50,7 +45,6 @@ export default function PlaygroundPage() {
             },
             livemode: false
           }
-          
           setToken(newToken)
           addLog(`Tokenization successful: ${newToken.id}`)
           setLoading(false)
@@ -60,73 +54,73 @@ export default function PlaygroundPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-8 max-w-screen-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-white">Tokenizer Playground</h1>
-        <p className="text-[#9bb0c2] mt-1">Test the Atlas Secure Frame and inspect the tokenization flow.</p>
+        <h1 className="dashboard-heading text-2xl">Tokenizer Playground</h1>
+        <p className="text-slate-500 mt-1">Interact with the Atlas Secure Frame and inspect the underlying cryptographic flow.</p>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_400px] gap-6">
-        {/* Left Column: The Payment Form */}
-        <div className="space-y-6">
-          <div className="rounded-2xl bg-[#111] border border-white/10 p-6 relative overflow-hidden">
-            {/* Environment Badge */}
-            <div className="absolute top-4 right-4">
-               <Badge className="bg-[#c8ff5a]/10 text-[#c8ff5a] border-[#c8ff5a]/20">
-                 <ZapIcon className="w-3 h-3 mr-1" />
-                 Sandbox
+      <div className="grid lg:grid-cols-[1fr_400px] gap-8">
+        <div className="space-y-8">
+          <div className="dashboard-card p-8 relative overflow-hidden">
+            <div className="absolute top-6 right-6">
+               <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                 <ZapIcon className="w-3 h-3 mr-1.5" />
+                 Sandbox Environment
                </Badge>
             </div>
 
-            <div className="flex items-center gap-2 mb-6 text-white">
-              <CreditCard className="h-5 w-5 text-[#19d1c3]" />
-              <h2 className="text-lg font-semibold">Payment Details</h2>
+            <div className="flex items-center gap-3 mb-10">
+              <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
+                <CreditCard className="h-5 w-5 text-cyan-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Payment Orchestration</h2>
             </div>
 
-            <form onSubmit={handleTokenize} className="space-y-5 max-w-md">
+            <form onSubmit={handleTokenize} className="space-y-6 max-w-md">
               <div className="space-y-2">
-                <Label htmlFor="pan" className="text-gray-300">Card Number</Label>
+                <Label htmlFor="pan" className="text-slate-300">Card Number</Label>
                 <div className="relative">
                   <Input
                     id="pan"
                     placeholder="4242 4242 4242 4242"
                     value={pan}
                     onChange={(e) => setPan(e.target.value)}
-                    className="pl-10 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-600 font-mono"
+                    className="pl-10 bg-obsidian border-white/10 text-white placeholder:text-slate-600 font-mono focus:border-cyan-400"
                   />
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="expiry" className="text-gray-300">Expiry</Label>
+                  <Label htmlFor="expiry" className="text-slate-300">Expiry</Label>
                   <Input
                     id="expiry"
                     placeholder="MM/YY"
                     value={expiry}
                     onChange={(e) => setExpiry(e.target.value)}
-                    className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-600 font-mono"
+                    className="bg-obsidian border-white/10 text-white placeholder:text-slate-600 font-mono focus:border-cyan-400"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cvc" className="text-gray-300">CVC</Label>
+                  <Label htmlFor="cvc" className="text-slate-300">CVC</Label>
                   <Input
                     id="cvc"
                     placeholder="123"
                     value={cvc}
                     onChange={(e) => setCvc(e.target.value)}
                     type="password"
-                    className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-600 font-mono"
+                    className="bg-obsidian border-white/10 text-white placeholder:text-slate-600 font-mono focus:border-cyan-400"
                   />
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-4">
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#19d1c3] hover:bg-[#19d1c3]/90 text-black font-medium"
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold h-12 rounded-full shadow-lg shadow-cyan-500/20 transition-all"
                 >
                   {loading ? (
                     <>
@@ -135,80 +129,75 @@ export default function PlaygroundPage() {
                     </>
                   ) : (
                     <>
-                      Pay $49.90
+                      Execute Tokenization
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </>
                   )}
                 </Button>
-                <p className="mt-3 text-xs text-center text-gray-500 flex items-center justify-center gap-1">
-                  <ShieldCheck className="h-3 w-3" />
-                  Processed securely by Atlas Vault
-                </p>
+                <div className="mt-4 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-slate-500">
+                  <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                  Secured by Atlas PCI-DSS Vault
+                </div>
               </div>
             </form>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-4">
-            <div className="rounded-xl bg-[#111] border border-white/10 p-4">
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
-              <div className="flex items-center gap-2 text-[#c8ff5a] font-medium">
-                <CheckCircle2 className="h-4 w-4" />
-                Ready
+            {[
+              { label: 'System Status', value: 'Ready', icon: CheckCircle2, color: 'text-emerald-400' },
+              { label: 'Network Latency', value: '~120ms', icon: RefreshCw, color: 'text-cyan-400' },
+              { label: 'Encryption', value: 'AES-256', icon: Lock, color: 'text-blue-400' },
+            ].map((item, i) => (
+              <div key={i} className="dashboard-card p-5">
+                <div className="text-[10px] uppercase tracking-widest font-bold text-slate-500 mb-2">{item.label}</div>
+                <div className={`flex items-center gap-2 font-semibold ${item.color}`}>
+                  <item.icon className="h-4 w-4" />
+                  {item.value}
+                </div>
               </div>
-            </div>
-            <div className="rounded-xl bg-[#111] border border-white/10 p-4">
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Latency</div>
-              <div className="text-white font-medium">~120ms</div>
-            </div>
-            <div className="rounded-xl bg-[#111] border border-white/10 p-4">
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Vault</div>
-              <div className="text-white font-medium">AES-256</div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Right Column: Console/Logs */}
         <div className="space-y-6">
-           {/* Token Result */}
-          <div className="rounded-2xl bg-[#0b111a] border border-white/10 overflow-hidden flex flex-col h-[300px]">
+          <div className="dashboard-card overflow-hidden flex flex-col h-[350px]">
             <div className="px-4 py-3 border-b border-white/10 bg-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-medium text-gray-300">
-                <Terminal className="h-4 w-4 text-[#19d1c3]" />
-                Token Response
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                <Terminal className="h-4 w-4 text-cyan-400" />
+                Response
               </div>
-              {token && <Badge className="bg-[#19d1c3]/20 text-[#19d1c3] border-0 text-[10px]">201 Created</Badge>}
+              {token && <Badge className="bg-emerald-500/10 text-emerald-400 border-0 text-[10px] font-mono">201 OK</Badge>}
             </div>
-            <div className="p-4 overflow-auto flex-1 font-mono text-xs">
+            <div className="p-5 overflow-auto flex-1 font-mono text-xs bg-black/20">
               {token ? (
-                <pre className="text-[#c8ff5a]">
+                <pre className="text-cyan-400 leading-relaxed">
                   {JSON.stringify(token, null, 2)}
                 </pre>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-gray-600 gap-2">
-                  <Play className="h-8 w-8 opacity-20" />
-                  <p>Submit the form to generate a token</p>
+                <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-3">
+                  <Play className="h-8 w-8 opacity-10" />
+                  <p className="text-[10px] uppercase tracking-widest font-bold">Awaiting Transaction</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* System Logs */}
-          <div className="rounded-2xl bg-[#0b111a] border border-white/10 overflow-hidden flex flex-col h-[300px]">
+          <div className="dashboard-card overflow-hidden flex flex-col h-[350px]">
             <div className="px-4 py-3 border-b border-white/10 bg-white/5">
-              <div className="flex items-center gap-2 text-xs font-medium text-gray-300">
-                <ShieldCheck className="h-4 w-4 text-[#4cc3ff]" />
-                Vault Logs
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                <ShieldCheck className="h-4 w-4 text-blue-400" />
+                Engine Logs
               </div>
             </div>
-            <div className="p-4 overflow-auto flex-1 font-mono text-xs space-y-2">
+            <div className="p-5 overflow-auto flex-1 font-mono text-xs bg-black/20 space-y-3">
               {logs.length > 0 ? (
                 logs.map((log, i) => (
-                  <div key={i} className="text-gray-400 border-l-2 border-[#19d1c3]/30 pl-3">
+                  <div key={i} className="text-slate-400 border-l border-cyan-500/30 pl-4 py-0.5">
                     {log}
                   </div>
                 ))
               ) : (
-                <span className="text-gray-600 italic">Waiting for input...</span>
+                <span className="text-slate-600 italic">No events recorded.</span>
               )}
             </div>
           </div>

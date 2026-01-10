@@ -41,7 +41,6 @@ import { createPspCredential } from './actions'
 
 type PSPName = 'stripe' | 'adyen' | 'authorizenet' | 'chase' | 'nuvei' | 'dlocal' | 'braintree' | 'checkoutcom' | 'airwallex' | 'windcave'
 
-// Payment Processor Logo paths (stored in /public/logos/)
 const PSP_LOGOS: Record<PSPName, string> = {
   stripe: '/logos/stripe.svg',
   adyen: '/logos/adyen.svg',
@@ -190,7 +189,6 @@ export default function ProcessorsPage() {
   const [error, setError] = useState<string | null>(null)
   const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null)
 
-  // Load credentials
   const loadCredentials = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -198,9 +196,7 @@ export default function ProcessorsPage() {
       .select('id, psp, environment, is_active, created_at, updated_at')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Error loading credentials:', error)
-    } else {
+    if (!error) {
       setCredentials(data || [])
     }
     setLoading(false)
@@ -212,10 +208,7 @@ export default function ProcessorsPage() {
 
   const handleAddCredential = async () => {
     if (!selectedPSP) return
-
     setError(null)
-
-    // Validate required fields
     for (const field of selectedPSP.fields) {
       if (field.required && !formData[field.key]?.trim()) {
         setError(`${field.label} is required`)
@@ -226,7 +219,6 @@ export default function ProcessorsPage() {
     startTransition(async () => {
       try {
         if (editingCredentialId) {
-          // Update existing credential
           await createPspCredential({
             id: editingCredentialId,
             psp: selectedPSP.name,
@@ -234,14 +226,12 @@ export default function ProcessorsPage() {
             credentials: formData,
           })
         } else {
-          // Create new credential
           await createPspCredential({
             psp: selectedPSP.name,
             environment,
             credentials: formData,
           })
         }
-
         setShowAddDialog(false)
         setSelectedPSP(null)
         setFormData({})
@@ -256,76 +246,53 @@ export default function ProcessorsPage() {
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     startTransition(async () => {
-      await supabase
-        .from('psp_credentials')
-        .update({ is_active: isActive })
-        .eq('id', id)
-
+      await supabase.from('psp_credentials').update({ is_active: isActive }).eq('id', id)
       await loadCredentials()
     })
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this processor credential?')) {
-      return
-    }
-
+    if (!confirm('Are you sure you want to delete this processor credential?')) return
     startTransition(async () => {
-      await supabase
-        .from('psp_credentials')
-        .delete()
-        .eq('id', id)
-
+      await supabase.from('psp_credentials').delete().eq('id', id)
       await loadCredentials()
     })
   }
 
   const handleEdit = async (cred: PSPCredential) => {
-    const config = getPSPConfig(cred.psp)
+    const config = PSP_CONFIGS.find(p => p.name === cred.psp)
     if (!config) return
-
-    // Fetch the current credentials to pre-fill the form
-    const { data } = await supabase
-      .from('psp_credentials')
-      .select('credentials_encrypted')
-      .eq('id', cred.id)
-      .single()
-
-    // Note: We can't decrypt here (client-side), so we'll just show empty fields
-    // User needs to re-enter credentials when editing
     setSelectedPSP(config)
     setEnvironment(cred.environment)
     setEditingCredentialId(cred.id)
-    setFormData({}) // Can't pre-fill encrypted fields
+    setFormData({})
     setShowAddDialog(true)
   }
-
-  const getPSPConfig = (name: PSPName) => PSP_CONFIGS.find(p => p.name === name)
 
   const getConfiguredPSPs = () => credentials.map(c => c.psp)
   const getAvailablePSPs = () => PSP_CONFIGS.filter(p => !getConfiguredPSPs().includes(p.name))
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-8 max-w-screen-2xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Payment Processors</h1>
-          <p className="text-gray-500 mt-1">Connect and manage your payment processor credentials</p>
+          <h1 className="dashboard-heading text-2xl">Payment Processors</h1>
+          <p className="text-slate-500 mt-1">Connect and manage your payment processor credentials</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="icon"
             onClick={loadCredentials}
             disabled={loading}
-            className="border-white/10 text-gray-300 hover:bg-white/5"
+            className="border-white/10 text-slate-300 hover:bg-white/5 h-10 w-10"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
           <Button
             onClick={() => setShowAddDialog(true)}
             disabled={getAvailablePSPs().length === 0}
-            className="bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90"
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 text-white font-medium h-10 px-6 rounded-full shadow-lg shadow-cyan-500/20"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Processor
@@ -333,34 +300,32 @@ export default function ProcessorsPage() {
         </div>
       </div>
 
-      {/* Security notice */}
-      <div className="rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 p-4 flex items-start gap-3">
-        <Shield className="h-5 w-5 text-green-400 mt-0.5" />
+      <div className="dashboard-card bg-emerald-500/5 border-emerald-500/20 p-4 flex items-start gap-3">
+        <Shield className="h-5 w-5 text-emerald-400 mt-0.5" />
         <div>
           <h3 className="font-medium text-white">Secure Credential Storage</h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-slate-400 mt-1">
             All credentials are encrypted at rest using AES-256 encryption. We never log or expose your API keys.
           </p>
         </div>
       </div>
 
-      {/* Configured processors */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-full flex items-center justify-center h-48">
-            <Loader2 className="h-8 w-8 text-[#19d1c3] animate-spin" />
+            <Loader2 className="h-8 w-8 text-cyan-400 animate-spin" />
           </div>
         ) : credentials.length === 0 ? (
           <div className="col-span-full">
-            <div className="rounded-2xl bg-[#111] border border-white/10 p-12 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <CreditCard className="h-8 w-8 text-gray-500" />
+            <div className="dashboard-card p-12 text-center">
+              <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4 border border-white/5">
+                <CreditCard className="h-8 w-8 text-slate-500" />
               </div>
               <h3 className="text-lg font-medium text-white mb-2">No processors connected</h3>
-              <p className="text-gray-500 mb-6">Add your first payment processor to start accepting payments.</p>
+              <p className="text-slate-500 mb-6">Add your first payment processor to start accepting payments.</p>
               <Button
                 onClick={() => setShowAddDialog(true)}
-                className="bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90"
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 text-white font-medium rounded-full h-11 px-8"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Processor
@@ -369,17 +334,17 @@ export default function ProcessorsPage() {
           </div>
         ) : (
           credentials.map((cred) => {
-            const config = getPSPConfig(cred.psp)
+            const config = PSP_CONFIGS.find(p => p.name === cred.psp)
             if (!config) return null
 
             return (
               <div
                 key={cred.id}
-                className="rounded-xl bg-[#111] border border-white/10 p-6 hover:border-white/20 transition-colors"
+                className="dashboard-card p-6 group hover:border-cyan-500/30"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center p-2">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-xl bg-white flex items-center justify-center p-3 border border-white/10 shadow-sm">
                       <img
                         src={PSP_LOGOS[config.name]}
                         alt={`${config.label} logo`}
@@ -387,27 +352,22 @@ export default function ProcessorsPage() {
                       />
                     </div>
                     <div>
-                      <h3 className="font-medium text-white">{config.label}</h3>
+                      <h3 className="font-semibold text-white text-lg">{config.label}</h3>
                       <Badge className={cred.environment === 'live'
-                        ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                       }>
                         {cred.environment}
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={cred.is_active}
-                      onCheckedChange={(checked) => handleToggleActive(cred.id, checked)}
-                      disabled={isPending}
-                    />
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEdit(cred)}
                       disabled={isPending}
-                      className="text-gray-400 hover:text-[#19d1c3] hover:bg-[#19d1c3]/10"
+                      className="text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10 h-8 w-8 rounded-full"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -416,31 +376,32 @@ export default function ProcessorsPage() {
                       size="icon"
                       onClick={() => handleDelete(cred.id)}
                       disabled={isPending}
-                      className="text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                      className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 h-8 w-8 rounded-full"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm">
-                  {cred.is_active ? (
-                    <>
-                      <Check className="h-4 w-4 text-green-400" />
-                      <span className="text-green-400">Active</span>
-                    </>
-                  ) : (
-                    <>
-                      <X className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-500">Inactive</span>
-                    </>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-white/5">
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>Added {new Date(cred.created_at).toLocaleDateString()}</span>
+                <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-2 text-sm">
+                    {cred.is_active ? (
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                        Active
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                        Inactive
+                      </div>
+                    )}
                   </div>
+                  <Switch
+                    checked={cred.is_active}
+                    onCheckedChange={(checked) => handleToggleActive(cred.id, checked)}
+                    disabled={isPending}
+                  />
                 </div>
               </div>
             )
@@ -448,11 +409,10 @@ export default function ProcessorsPage() {
         )}
       </div>
 
-      {/* Available processors */}
       {getAvailablePSPs().length > 0 && credentials.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-4">Available Processors</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="pt-8">
+          <h2 className="dashboard-heading text-lg mb-6">Available Processors</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {getAvailablePSPs().map((psp) => (
               <button
                 key={psp.name}
@@ -460,30 +420,29 @@ export default function ProcessorsPage() {
                   setSelectedPSP(psp)
                   setShowAddDialog(true)
                 }}
-                className="rounded-xl bg-[#111] border border-white/10 p-4 hover:border-[#19d1c3]/50 transition-colors text-center"
+                className="dashboard-card p-5 hover:border-cyan-500/40 hover:bg-white/[0.04] text-center group"
               >
-                <div className="h-10 w-10 rounded-lg bg-white flex items-center justify-center p-1.5 mx-auto mb-2">
+                <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center p-2.5 mx-auto mb-3 shadow-sm group-hover:scale-105 transition-transform">
                   <img
                     src={PSP_LOGOS[psp.name]}
                     alt={`${psp.label} logo`}
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="text-sm text-gray-300">{psp.label}</span>
+                <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">{psp.label}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Add Processor Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="bg-[#111] border-white/10 max-w-lg">
+        <DialogContent className="bg-charcoal border-white/10 max-w-lg text-slate-50">
           <DialogHeader>
             <DialogTitle className="text-white">
               {selectedPSP ? (editingCredentialId ? `Edit ${selectedPSP.label}` : `Connect ${selectedPSP.label}`) : 'Add Payment Processor'}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-slate-400">
               {selectedPSP
                 ? 'Enter your API credentials to connect this processor.'
                 : 'Select a payment processor to add.'}
@@ -496,7 +455,7 @@ export default function ProcessorsPage() {
                 <button
                   key={psp.name}
                   onClick={() => setSelectedPSP(psp)}
-                  className="rounded-xl bg-white/5 border border-white/10 p-4 hover:border-[#19d1c3]/50 transition-colors text-center"
+                  className="dashboard-card p-4 hover:border-cyan-500/50 hover:bg-white/5 transition-colors text-center"
                 >
                   <div className="h-10 w-10 rounded-lg bg-white flex items-center justify-center p-1.5 mx-auto mb-2">
                     <img
@@ -505,7 +464,7 @@ export default function ProcessorsPage() {
                       className="w-full h-full object-contain"
                     />
                   </div>
-                  <span className="text-sm text-gray-300">{psp.label}</span>
+                  <span className="text-xs font-medium text-slate-300">{psp.label}</span>
                 </button>
               ))}
             </div>
@@ -520,22 +479,22 @@ export default function ProcessorsPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-gray-300">Environment</Label>
+                  <Label className="text-slate-300">Environment</Label>
                   <Select value={environment} onValueChange={(v) => setEnvironment(v as 'test' | 'live')}>
-                    <SelectTrigger className="bg-[#0a0a0a] border-white/10 text-white">
+                    <SelectTrigger className="bg-obsidian border-white/10 text-white focus:border-cyan-400">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#111] border-white/10">
+                    <SelectContent className="bg-charcoal border-white/10">
                       <SelectItem value="test" className="text-white hover:bg-white/5">
                         <div className="flex items-center gap-2">
                           <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20">Test</Badge>
-                          <span>Sandbox / Development</span>
+                          <span className="text-slate-300">Sandbox / Development</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="live" className="text-white hover:bg-white/5">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-green-500/10 text-green-400 border-green-500/20">Live</Badge>
-                          <span>Production</span>
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Live</Badge>
+                          <span className="text-slate-300">Production</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -544,7 +503,7 @@ export default function ProcessorsPage() {
 
                 {selectedPSP.fields.map((field) => (
                   <div key={field.key} className="space-y-2">
-                    <Label className="text-gray-300">
+                    <Label className="text-slate-300">
                       {field.label}
                       {field.required && <span className="text-red-400 ml-1">*</span>}
                     </Label>
@@ -554,7 +513,7 @@ export default function ProcessorsPage() {
                         placeholder={field.placeholder}
                         value={formData[field.key] || ''}
                         onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                        className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500"
+                        className="bg-obsidian border-white/10 text-white placeholder:text-slate-600 focus:border-cyan-400"
                       />
                       {field.sensitive && (
                         <Button
@@ -562,7 +521,7 @@ export default function ProcessorsPage() {
                           variant="outline"
                           size="icon"
                           onClick={() => setShowSensitive({ ...showSensitive, [field.key]: !showSensitive[field.key] })}
-                          className="border-white/10 text-gray-300 hover:bg-white/5"
+                          className="border-white/10 text-slate-300 hover:bg-white/5"
                         >
                           {showSensitive[field.key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
@@ -572,7 +531,7 @@ export default function ProcessorsPage() {
                 ))}
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -580,14 +539,14 @@ export default function ProcessorsPage() {
                     setFormData({})
                     setError(null)
                   }}
-                  className="border-white/10 text-gray-300 hover:bg-white/5"
+                  className="border-white/10 text-slate-300 hover:bg-white/5 rounded-full px-6"
                 >
                   Back
                 </Button>
                 <Button
                   onClick={handleAddCredential}
                   disabled={isPending}
-                  className="bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 text-white font-semibold rounded-full px-8 shadow-lg shadow-cyan-500/20"
                 >
                   {isPending ? (
                     <>

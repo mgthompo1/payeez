@@ -53,10 +53,10 @@ function SignupForm() {
   }
 
   return (
-    <div className="rounded-2xl bg-[#111] border border-white/10 p-8">
+    <div className="rounded-2xl bg-charcoal border border-white/10 p-8 shadow-2xl">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-white">Create your account</h1>
-        <p className="text-gray-500 mt-2">Start accepting payments in minutes</p>
+        <p className="text-slate-400 mt-2">Start accepting payments in minutes</p>
       </div>
 
       <form onSubmit={handleSignup} className="space-y-6">
@@ -67,7 +67,7 @@ function SignupForm() {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-gray-300">Full name</Label>
+          <Label htmlFor="name" className="text-slate-300">Full name</Label>
           <Input
             id="name"
             type="text"
@@ -75,12 +75,12 @@ function SignupForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
+            className="h-12 bg-obsidian border-white/10 text-white placeholder:text-slate-600 focus:border-cyan-400 focus:ring-cyan-400/20"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-gray-300">Email</Label>
+          <Label htmlFor="email" className="text-slate-300">Email</Label>
           <Input
             id="email"
             type="email"
@@ -88,12 +88,12 @@ function SignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
+            className="h-12 bg-obsidian border-white/10 text-white placeholder:text-slate-600 focus:border-cyan-400 focus:ring-cyan-400/20"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-gray-300">Password</Label>
+          <Label htmlFor="password" className="text-slate-300">Password</Label>
           <Input
             id="password"
             type="password"
@@ -102,14 +102,14 @@ function SignupForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            className="h-12 bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500 focus:border-[#19d1c3] focus:ring-[#19d1c3]/20"
+            className="h-12 bg-obsidian border-white/10 text-white placeholder:text-slate-600 focus:border-cyan-400 focus:ring-cyan-400/20"
           />
         </div>
 
         <Button
           type="submit"
           disabled={loading}
-          className="w-full h-12 bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90 text-white font-medium"
+          className="w-full h-12 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium transition-all duration-300 shadow-[0_0_20px_-5px_rgba(6,182,212,0.5)]"
         >
           {loading ? (
             <>
@@ -126,9 +126,9 @@ function SignupForm() {
       </form>
 
       <div className="mt-6 text-center">
-        <p className="text-gray-500">
+        <p className="text-slate-500">
           Already have an account?{' '}
-          <Link href="/login" className="text-[#19d1c3] hover:text-[#4cc3ff] font-medium">
+          <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
             Sign in
           </Link>
         </p>
@@ -139,13 +139,13 @@ function SignupForm() {
 
 function SignupFormFallback() {
   return (
-    <div className="rounded-2xl bg-[#111] border border-white/10 p-8">
+    <div className="rounded-2xl bg-charcoal border border-white/10 p-8">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-white">Create your account</h1>
-        <p className="text-gray-500 mt-2">Start accepting payments in minutes</p>
+        <p className="text-slate-400 mt-2">Start accepting payments in minutes</p>
       </div>
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-[#19d1c3]" />
+        <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
       </div>
     </div>
   )
@@ -153,28 +153,25 @@ function SignupFormFallback() {
 
 export default function SignupPage() {
   return (
-    <div className="min-h-screen flex bg-[#0a0a0a]">
+    <div className="min-h-screen flex bg-obsidian selection:bg-cyan-500/30 selection:text-cyan-200">
+      <div className="bg-noise" />
+      
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 relative z-10">
         {/* Background gradient orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#19d1c3]/20 rounded-full blur-[100px]" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#c8ff5a]/20 rounded-full blur-[100px]" />
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px]" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px]" />
         </div>
 
         <div className="relative w-full max-w-md">
           {/* Logo */}
           <div className="flex justify-center mb-8 lg:hidden">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/brand/atlas-mark.svg"
-                alt="Atlas"
-                width={40}
-                height={40}
-                className="h-10 w-10"
-                priority
-              />
-              <span className="text-2xl font-bold text-white">Atlas</span>
+            <Link href="/" className="flex items-center gap-3">
+              <svg className="w-8 h-8 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L1 21h22L12 2zm0 3.5L19.5 19h-15L12 5.5z"/>
+              </svg>
+              <span className="text-2xl font-bold text-white tracking-tight">Atlas</span>
             </Link>
           </div>
 
@@ -182,57 +179,53 @@ export default function SignupPage() {
             <SignupForm />
           </Suspense>
 
-          <p className="text-center text-gray-600 text-sm mt-8">
+          <p className="text-center text-slate-500 text-sm mt-8">
             By signing up, you agree to our{' '}
-            <Link href="/terms" className="text-gray-400 hover:text-white">Terms of Service</Link>
+            <Link href="/terms" className="text-slate-400 hover:text-white transition-colors">Terms of Service</Link>
             {' '}and{' '}
-            <Link href="/privacy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
+            <Link href="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</Link>
           </p>
         </div>
       </div>
 
       {/* Right side - Features (hidden on mobile) */}
-      <div className="hidden lg:flex flex-1 items-center justify-center bg-gradient-to-br from-[#19d1c3]/10 to-[#c8ff5a]/10 border-l border-white/10 p-8">
+      <div className="hidden lg:flex flex-1 items-center justify-center bg-gradient-to-br from-cyan-500/5 to-blue-600/5 border-l border-white/5 p-8 relative z-10">
         <div className="max-w-md">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 mb-12">
-            <Image
-              src="/brand/atlas-mark.svg"
-              alt="Atlas"
-              width={48}
-              height={48}
-              className="h-12 w-12"
-            />
-            <span className="text-3xl font-bold text-white">Atlas</span>
+          <Link href="/" className="flex items-center gap-3 mb-12">
+            <svg className="w-10 h-10 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L1 21h22L12 2zm0 3.5L19.5 19h-15L12 5.5z"/>
+            </svg>
+            <span className="text-3xl font-bold text-white tracking-tight">Atlas</span>
           </Link>
 
           <h2 className="text-3xl font-bold text-white mb-4">
             Payment orchestration for modern businesses
           </h2>
-          <p className="text-gray-400 text-lg mb-8">
+          <p className="text-slate-400 text-lg mb-8">
             Connect to multiple payment processors, optimize authorization rates, and ensure your payments never fail.
           </p>
 
           <div className="space-y-4">
             {features.map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <Check className="h-4 w-4 text-green-400" />
+                <div className="h-6 w-6 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                  <Check className="h-4 w-4 text-cyan-400" />
                 </div>
-                <span className="text-gray-300">{feature}</span>
+                <span className="text-slate-300">{feature}</span>
               </div>
             ))}
           </div>
 
-          <div className="mt-12 p-6 rounded-xl bg-white/5 border border-white/10">
-            <p className="text-gray-400 italic">
+          <div className="mt-12 p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
+            <p className="text-slate-300 italic">
               &ldquo;Atlas has transformed how we handle payments. The resilience features mean we never miss a transaction.&rdquo;
             </p>
             <div className="mt-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a]" />
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600" />
               <div>
                 <p className="text-white font-medium">Sarah Chen</p>
-                <p className="text-sm text-gray-500">CTO, TechCorp</p>
+                <p className="text-sm text-slate-500">CTO, TechCorp</p>
               </div>
             </div>
           </div>

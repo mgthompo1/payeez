@@ -5,18 +5,8 @@
 ALTER TABLE subscriptions
 ADD COLUMN IF NOT EXISTS trial_reminder_sent TIMESTAMPTZ;
 
--- Add amount_remaining to invoices for tracking partial payments
-ALTER TABLE invoices
-ADD COLUMN IF NOT EXISTS amount_remaining INTEGER;
-
--- Add amount_paid to invoices
-ALTER TABLE invoices
-ADD COLUMN IF NOT EXISTS amount_paid INTEGER DEFAULT 0;
-
--- Update amount_remaining to equal total by default
-UPDATE invoices
-SET amount_remaining = total
-WHERE amount_remaining IS NULL;
+-- Note: amount_remaining and amount_paid are already defined in 00022_subscriptions_and_billing.sql
+-- amount_remaining is a generated column computed as (amount_due - amount_paid)
 
 -- Create index for trial reminder queries
 CREATE INDEX IF NOT EXISTS idx_subscriptions_trial_reminder
@@ -55,7 +45,5 @@ ALTER TABLE invoices
 ADD COLUMN IF NOT EXISTS hosted_invoice_url TEXT;
 
 COMMENT ON COLUMN subscriptions.trial_reminder_sent IS 'Timestamp when trial ending reminder email was sent';
-COMMENT ON COLUMN invoices.amount_remaining IS 'Amount remaining to be paid on invoice';
-COMMENT ON COLUMN invoices.amount_paid IS 'Amount already paid on invoice';
 COMMENT ON COLUMN invoices.number IS 'Human-readable invoice number (e.g., INV-000001)';
 COMMENT ON COLUMN invoices.hosted_invoice_url IS 'URL for hosted invoice payment page';

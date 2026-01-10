@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -12,16 +11,14 @@ import {
   BookOpen,
   GitBranch,
   ChevronRight,
-  Zap,
   Users,
   Cpu,
   UserCircle,
   Repeat,
   Receipt,
-  Key
+  Key,
+  Search
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +33,6 @@ interface NavSection {
     name: string
     href: string
     icon: any
-    feature?: 'billing' // Feature flag key
   }>
 }
 
@@ -50,9 +46,9 @@ const navigationSections: NavSection[] = [
   {
     title: 'Billing',
     items: [
-      { name: 'Customers', href: '/dashboard/customers', icon: UserCircle, feature: 'billing' },
-      { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: Repeat, feature: 'billing' },
-      { name: 'Invoices', href: '/dashboard/invoices', icon: Receipt, feature: 'billing' },
+      { name: 'Customers', href: '/dashboard/customers', icon: UserCircle },
+      { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: Repeat },
+      { name: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
     ]
   },
   {
@@ -91,97 +87,96 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  // Get tenant features (billing enabled by default for now)
-  // In production, fetch from tenant settings
-  const enabledFeatures = {
-    billing: true, // Toggle to show/hide billing section
-  }
-
   const initials = user.email?.slice(0, 2).toUpperCase() || 'U'
 
-  // Filter sections based on enabled features
-  const visibleSections = navigationSections
-    .map(section => ({
-      ...section,
-      items: section.items.filter(item =>
-        !item.feature || enabledFeatures[item.feature as keyof typeof enabledFeatures]
-      )
-    }))
-    .filter(section => section.items.length > 0)
-
   return (
-    <div className="min-h-screen bg-[var(--brand-ink)] text-white">
-      {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 z-50 w-56 bg-[#0f1621] border-r border-white/10">
-        <div className="flex h-14 items-center px-4 border-b border-white/10">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Image
-              src="/brand/atlas-mark.svg"
-              alt="Atlas"
-              width={28}
-              height={28}
-              className="h-7 w-7"
-              priority
-            />
-            <span className="text-sm font-semibold text-white">Atlas</span>
-          </Link>
-        </div>
-
-        {/* Environment Badge */}
-        <div className="px-3 py-2 border-b border-white/10">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-[#c8ff5a]/10 border border-[#c8ff5a]/20">
-            <Zap className="h-3.5 w-3.5 text-[#c8ff5a]" />
-            <span className="text-xs font-medium text-[#c8ff5a]">Test Mode</span>
+    <div className="flex h-screen overflow-hidden bg-obsidian text-[#E5E5E5] font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* High-Density Sidebar */}
+      <aside className="w-64 bg-charcoal border-r border-white/5 flex flex-col justify-between z-20">
+        <div>
+          {/* Header */}
+          <div className="h-14 flex items-center px-4 border-b border-white/5">
+            <Link href="/dashboard" className="flex items-center gap-3 group">
+              <div className="w-6 h-6 flex items-center justify-center rounded-sm transition-transform group-hover:scale-105">
+                <svg className="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L1 21h22L12 2zm0 3.5L19.5 19h-15L12 5.5z"/>
+                </svg>
+              </div>
+              <span className="font-medium tracking-tight text-sm text-white">Atlas Console</span>
+            </Link>
           </div>
+
+          {/* Context Switcher */}
+          <div className="px-4 py-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded text-xs text-slate-300 hover:bg-white/10 hover:border-cyan-500/20 transition cursor-pointer group">
+                  <span className="truncate group-hover:text-cyan-400 transition-colors">Production</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]"></div>
+                    <ChevronRight className="w-3 h-3 text-slate-500 rotate-90" />
+                  </div>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-charcoal border-white/10 text-white">
+                <DropdownMenuItem className="text-xs hover:bg-white/5 focus:bg-white/5 cursor-pointer flex justify-between">
+                  <span>Production</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-xs hover:bg-white/5 focus:bg-white/5 cursor-pointer flex justify-between">
+                  <span>Sandbox</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Navigation */}
+          <nav className="px-2 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+            {navigationSections.map((section, idx) => (
+              <div key={idx} className="space-y-0.5">
+                {section.title && (
+                  <div className="px-3 mb-2 text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider">
+                    {section.title}
+                  </div>
+                )}
+                {section.items.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-400 hover:text-cyan-400 hover:bg-cyan-950/20 rounded-md transition-all duration-200 group"
+                  >
+                    <item.icon className="w-4 h-4 opacity-70 group-hover:text-cyan-400 group-hover:opacity-100" />
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+            ))}
+          </nav>
         </div>
 
-        <nav className="flex flex-col gap-0.5 p-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
-          {visibleSections.map((section, sectionIndex) => (
-            <div key={section.title || sectionIndex} className={section.title ? 'mt-4 first:mt-0' : ''}>
-              {section.title && (
-                <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-[#6b7c8a] font-medium">
-                  {section.title}
-                </div>
-              )}
-              {section.items.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="group flex items-center gap-2.5 px-2 py-1.5 text-sm text-[#9bb0c2] rounded-md hover:bg-white/5 hover:text-white transition-all"
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        {/* Bottom section */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/10">
+        {/* User Profile */}
+        <div className="p-4 border-t border-white/10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/5 transition-colors">
-                <Avatar className="h-7 w-7 bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a]">
-                  <AvatarFallback className="bg-transparent text-[#081014] text-xs font-medium">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-xs font-medium text-white truncate">{user.email}</p>
+              <button className="flex items-center gap-3 w-full group">
+                <div className="w-8 h-8 rounded-full bg-cyan-900/20 border border-cyan-500/20 flex items-center justify-center text-[10px] font-mono font-medium text-cyan-400 group-hover:bg-cyan-900/30 transition-colors">
+                  {initials}
                 </div>
-                <ChevronRight className="h-3.5 w-3.5 text-[#6b7c8a]" />
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs font-medium text-white truncate group-hover:text-cyan-400 transition-colors">{user.email?.split('@')[0]}</p>
+                  <p className="text-[10px] text-slate-500 truncate">Engineering</p>
+                </div>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="right" className="w-48 bg-[#1a1a1a] border-white/10">
-              <DropdownMenuItem asChild className="text-gray-300 focus:bg-white/10 focus:text-white">
+            <DropdownMenuContent align="start" side="right" className="w-48 bg-charcoal border-white/10 text-white ml-2">
+              <DropdownMenuItem asChild className="text-xs focus:bg-white/10 cursor-pointer">
                 <Link href="/dashboard/settings">Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <form action="/auth/signout" method="POST">
-                <DropdownMenuItem asChild className="text-gray-300 focus:bg-white/10 focus:text-white">
+                <DropdownMenuItem asChild className="text-xs focus:bg-white/10 cursor-pointer text-red-400 focus:text-red-400">
                   <button type="submit" className="w-full flex items-center">
-                    <LogOut className="mr-2 h-4 w-4" />
                     Sign out
                   </button>
                 </DropdownMenuItem>
@@ -189,14 +184,29 @@ export default async function DashboardLayout({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </aside>
 
-      {/* Main content */}
-      <div className="pl-56">
-        <main className="p-6">
-          {children}
-        </main>
-      </div>
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 bg-obsidian relative">
+        
+        {/* Top Metric Bar (Ticker Style) */}
+        <header className="h-14 border-b border-white/10 flex items-center justify-between px-6 bg-charcoal/80 backdrop-blur z-10 shrink-0">
+          <div className="flex items-center gap-4 ml-auto">
+            <div className="flex items-center bg-white/5 rounded px-2 py-1 border border-white/10 hover:border-cyan-500/30 transition-colors cursor-pointer">
+              <Search className="w-3 h-3 text-slate-400 mr-2" />
+              <span className="text-[10px] text-slate-400 font-mono">CMD + K</span>
+            </div>
+            <div className="h-4 w-px bg-white/10"></div>
+            <div className="text-[10px] font-mono text-slate-500">us-east-1</div>
+            <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] status-dot"></div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="flex-1 overflow-auto relative">
+           {children}
+        </div>
+      </main>
     </div>
   )
 }

@@ -455,8 +455,7 @@ CREATE TABLE IF NOT EXISTS portal_sessions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_portal_sessions_token ON portal_sessions(access_token)
-  WHERE expires_at > NOW();
+CREATE INDEX idx_portal_sessions_token ON portal_sessions(access_token);
 CREATE INDEX idx_portal_sessions_customer ON portal_sessions(customer_id);
 
 -- ============================================
