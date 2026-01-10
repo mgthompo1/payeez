@@ -1,10 +1,11 @@
 [build]
-  command = "npm install lightningcss-linux-x64-gnu@1.29.0 --save-dev --ignore-scripts && npm run build"
+  command = "cd ../.. && rm -rf node_modules && npm install && cd packages/web && npm run build"
   publish = ".next"
 
 [build.environment]
   NETLIFY_BLOBS_ENABLED = "false"
   NEXT_TELEMETRY_DISABLED = "1"
+  NETLIFY_USE_YARN = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
