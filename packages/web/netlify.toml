@@ -1,9 +1,10 @@
 [build]
-  command = "npm rebuild lightningcss && npm run build"
+  command = "cd ../.. && npm rebuild && cd packages/web && npm run build"
   publish = ".next"
 
 [build.environment]
   NETLIFY_BLOBS_ENABLED = "false"
+  NEXT_TELEMETRY_DISABLED = "1"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
