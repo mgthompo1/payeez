@@ -56,6 +56,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Enhanced Payment Session API
+- **Merchant Reference** - Pass order/invoice ID to PSP for reconciliation (`merchant_reference`)
+- **Customer Data** - Include customer email, name, phone for fraud prevention
+- **Browser Info** - Browser IP and user agent for 3DS/risk assessment
+- **Address Verification** - Billing/shipping addresses for AVS fraud scoring
+- **Statement Descriptor** - Custom descriptor shown on cardholder statement
+- **Metadata** - Arbitrary key-value pairs stored with the session
+
+#### Windcave Adapter Enhancements
+- AVS data passing for address verification
+- Browser IP forwarding for 3DS risk assessment
+- Statement descriptor support
+- AVS/CVV/3DS result extraction from responses
+- Metadata storage in Windcave's txnData1 field
+
+#### Payment Attempt Tracking
+- 3DS version, status, and ECI code tracking
+- AVS and CVV result storage
+- Browser IP logging per attempt
+
+#### E2E Testing Framework (`packages/e2e`)
+- **Playwright Setup** - Multi-browser testing (Chrome, Firefox, Safari, Mobile)
+- **PSP Mock Fixtures** - Mock Windcave/Stripe responses for testing orchestration
+- **Test Suites**:
+  - Orchestration tests: failover, traffic splitting, retry logic
+  - Dashboard tests: navigation, settings, API keys
+  - Payment flow tests: session creation, validation, event logging
+
 #### Resilience & High Availability Architecture
 - **Circuit Breaker Pattern** - Automatic failure detection with state transitions (CLOSED → OPEN → HALF_OPEN)
 - **Multi-Region Failover** - SDK automatically routes to healthy endpoints
