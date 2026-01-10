@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Composable Payment Form Elements (`@atlas/elements`)
+
+**Fully customizable, accessible payment form components:**
+
+- **Individual Elements**
+  - `CardNumberElement` - Card number input with brand detection (15 brands)
+  - `CardExpiryElement` - MM/YY expiry with validation
+  - `CardCvcElement` - CVC/CVV with card-aware length (3-4 digits)
+  - `CardholderElement` - Cardholder name input
+  - `CardElement` - Combined card form with flexible layout
+
+- **Layout Components**
+  - `TabsLayout` - Tabbed payment method selector (default, pills, underline variants)
+  - `AccordionLayout` - Accordion payment method selector (radio-style selection)
+
+- **Theming System**
+  - 5 presets: `default`, `night`, `minimal`, `flat`, `modern`
+  - 40+ CSS variables for full customization
+  - Colors, typography, spacing, borders, shadows, transitions
+
+- **Internationalization**
+  - 40+ locales with full translations
+  - RTL support for Arabic, Hebrew, Persian, Urdu
+  - Auto-detection from browser settings
+
+- **Accessibility (WCAG 2.1 AA)**
+  - Full ARIA attributes on all elements
+  - Keyboard navigation support
+  - Screen reader announcements
+  - Focus management
+
+- **Card Brand Detection**
+  - 15 supported brands: Visa, Mastercard, Amex, Discover, JCB, Diners, UnionPay, Maestro, Elo, Mir, Hiper, Hipercard, Troy, UATP, RuPay
+  - Real-time brand icon display
+  - Brand-specific validation rules
+
 #### Vault Provider Abstraction Layer
 
 **Provider-agnostic architecture for PCI scope flexibility:**
@@ -82,7 +118,7 @@ packages/api/src/lib/vault/
 
 ### Added
 
-#### SDK Stripe-like API Improvements (`@atlas/sdk`)
+#### SDK API Improvements (`@atlas/sdk`)
 - **onChange events** - Real-time form state with `complete`, `empty`, `error`, and `brand` fields
 - **onFocus/onBlur callbacks** - Field-level focus tracking for parent integration
 - **Appearance API** - Full theming support:
@@ -129,7 +165,7 @@ packages/api/src/lib/vault/
 
 #### Subscriptions & Recurring Billing
 
-**Full Stripe-like subscription billing system:**
+**Complete subscription billing system:**
 
 - **Products API** (`/products`)
   - Create and manage products with metadata
@@ -290,7 +326,7 @@ packages/api/src/lib/vault/
 
 #### E2E Testing Framework (`packages/e2e`)
 - **Playwright Setup** - Multi-browser testing (Chrome, Firefox, Safari, Mobile)
-- **PSP Mock Fixtures** - Mock Windcave/Stripe responses for testing orchestration
+- **PSP Mock Fixtures** - Mock PSP responses for testing orchestration
 - **Test Suites**:
   - Orchestration tests: failover, traffic splitting, retry logic
   - Dashboard tests: navigation, settings, API keys
@@ -381,13 +417,13 @@ packages/api/src/lib/vault/
 ##### Basis Theory Reactor
 - **`basis-theory-reactor/backup-orchestrator.js`** - Backup payment orchestrator
   - Runs in Basis Theory infrastructure (not Supabase)
-  - PSP adapters for Stripe, Adyen, Braintree
+  - PSP adapters for major processors (Adyen, Braintree, etc.)
   - Activated when Atlas primary systems are down
   - Transaction recording for later sync
 
 - VGS token handling in `confirm-payment` edge function
   - Added `vgs_data` field to ConfirmRequest interface
-  - VGS proxy configuration for Stripe adapter
+  - VGS proxy configuration for PSP adapters
 
 ##### Database Migrations
 - **`00005_resilience_3ds_network_tokens.sql`** - Resilience and advanced features schema
@@ -418,7 +454,7 @@ packages/api/src/lib/vault/
 ##### Landing Page (`src/app/page.tsx`)
 - Dark theme with animated gradient orbs
 - Terminal-style code blocks with syntax highlighting
-- Processor logos section (Stripe, Adyen, Braintree, etc.)
+- Processor logos section (Adyen, Braintree, Nuvei, etc.)
 - Feature grid with hover effects
 - CTA section with grid pattern background
 
@@ -587,6 +623,6 @@ packages/api/src/lib/vault/
 - **Backend**: Supabase Edge Functions (Deno)
 - **Database**: PostgreSQL (Supabase)
 - **Vault Providers**: Basis Theory, VGS
-- **Payment Processors**: Stripe, Adyen, Braintree, Checkout.com, etc.
+- **Payment Processors**: Adyen, Braintree, Checkout.com, Nuvei, Windcave, etc.
 - **Resilience**: Circuit Breaker, Basis Theory Reactors
 - **Security**: 3D Secure 2.2.0, Network Tokens, PCI DSS compliant
