@@ -2,9 +2,8 @@
 
 import { Fragment, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { CodeBlock, MultiLanguageCodeBlock } from '@/components/docs'
 import {
-  Copy,
-  Check,
   Terminal,
   Code2,
   Webhook,
@@ -27,44 +26,11 @@ import {
   Users,
   Receipt,
   Package,
-  Landmark
+  Landmark,
+  Check
 } from 'lucide-react'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.atlas.co/functions/v1'
-
-function CodeBlock({ code, language = 'bash', title }: { code: string; language?: string; title?: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div className="relative group">
-      {title && (
-        <div className="bg-obsidian px-4 py-2 rounded-t-xl border border-b-0 border-white/10 flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-400">{title}</span>
-          <Badge variant="outline" className="text-[10px] text-slate-500 border-white/10">{language}</Badge>
-        </div>
-      )}
-      <pre className={`bg-black/40 ${title ? 'rounded-b-xl rounded-t-none' : 'rounded-xl'} p-4 text-sm font-mono overflow-x-auto border border-white/10`}>
-        <code className="text-slate-300">{code}</code>
-      </pre>
-      <button
-        onClick={copyToClipboard}
-        className="absolute top-3 right-3 p-2 rounded-lg bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10"
-      >
-        {copied ? (
-          <Check className="h-4 w-4 text-green-400" />
-        ) : (
-          <Copy className="h-4 w-4 text-slate-400" />
-        )}
-      </button>
-    </div>
-  )
-}
 
 function ParamTable({ params }: { params: { name: string; type: string; required?: boolean; description: string; children?: { name: string; type: string; description: string }[] }[] }) {
   return (
@@ -542,9 +508,12 @@ app.post('/webhooks/atlas', express.raw({ type: 'application/json' }), (req, res
 
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Example Request</h4>
-                <CodeBlock language="bash" code={`curl -X POST ${API_BASE}/create-session \
-  -H "Authorization: Bearer sk_test_your_api_key" \
-  -H "Content-Type: application/json" \
+                <MultiLanguageCodeBlock
+                  title="Create Session"
+                  examples={{
+                    curl: `curl -X POST ${API_BASE}/create-session \\
+  -H "Authorization: Bearer sk_test_your_api_key" \\
+  -H "Content-Type: application/json" \\
   -d '{
     "amount": 4990,
     "currency": "USD",
@@ -554,12 +523,144 @@ app.post('/webhooks/atlas', express.raw({ type: 'application/json' }), (req, res
       "email": "customer@example.com",
       "name": "John Doe"
     },
-    "metadata": {
-      "plan": "premium"
-    },
+    "metadata": { "plan": "premium" },
     "success_url": "https://yoursite.com/checkout/success",
     "cancel_url": "https://yoursite.com/checkout/cancel"
-  }'`}
+  }'`,
+                    javascript: `const response = await fetch('${API_BASE}/create-session', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    amount: 4990,
+    currency: 'USD',
+    external_id: 'order_12345',
+    capture_method: 'automatic',
+    customer: {
+      email: 'customer@example.com',
+      name: 'John Doe'
+    },
+    metadata: { plan: 'premium' },
+    success_url: 'https://yoursite.com/checkout/success',
+    cancel_url: 'https://yoursite.com/checkout/cancel'
+  })
+});
+
+const session = await response.json();`,
+                    python: `import requests
+
+response = requests.post(
+    '${API_BASE}/create-session',
+    headers={
+        'Authorization': 'Bearer sk_test_your_api_key',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'amount': 4990,
+        'currency': 'USD',
+        'external_id': 'order_12345',
+        'capture_method': 'automatic',
+        'customer': {
+            'email': 'customer@example.com',
+            'name': 'John Doe'
+        },
+        'metadata': {'plan': 'premium'},
+        'success_url': 'https://yoursite.com/checkout/success',
+        'cancel_url': 'https://yoursite.com/checkout/cancel'
+    }
+)
+
+session = response.json()`,
+                    ruby: `require 'net/http'
+require 'json'
+require 'uri'
+
+uri = URI('${API_BASE}/create-session')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(uri)
+request['Authorization'] = 'Bearer sk_test_your_api_key'
+request['Content-Type'] = 'application/json'
+request.body = {
+  amount: 4990,
+  currency: 'USD',
+  external_id: 'order_12345',
+  capture_method: 'automatic',
+  customer: { email: 'customer@example.com', name: 'John Doe' },
+  metadata: { plan: 'premium' },
+  success_url: 'https://yoursite.com/checkout/success',
+  cancel_url: 'https://yoursite.com/checkout/cancel'
+}.to_json
+
+response = http.request(request)
+session = JSON.parse(response.body)`,
+                    go: `package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "net/http"
+)
+
+func createSession() {
+    payload := map[string]interface{}{
+        "amount":         4990,
+        "currency":       "USD",
+        "external_id":    "order_12345",
+        "capture_method": "automatic",
+        "customer": map[string]string{
+            "email": "customer@example.com",
+            "name":  "John Doe",
+        },
+        "metadata":    map[string]string{"plan": "premium"},
+        "success_url": "https://yoursite.com/checkout/success",
+        "cancel_url":  "https://yoursite.com/checkout/cancel",
+    }
+
+    body, _ := json.Marshal(payload)
+    req, _ := http.NewRequest("POST", "${API_BASE}/create-session", bytes.NewBuffer(body))
+    req.Header.Set("Authorization", "Bearer sk_test_your_api_key")
+    req.Header.Set("Content-Type", "application/json")
+
+    client := &http.Client{}
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+}`,
+                    php: `<?php
+
+$ch = curl_init('${API_BASE}/create-session');
+
+$payload = json_encode([
+    'amount' => 4990,
+    'currency' => 'USD',
+    'external_id' => 'order_12345',
+    'capture_method' => 'automatic',
+    'customer' => [
+        'email' => 'customer@example.com',
+        'name' => 'John Doe'
+    ],
+    'metadata' => ['plan' => 'premium'],
+    'success_url' => 'https://yoursite.com/checkout/success',
+    'cancel_url' => 'https://yoursite.com/checkout/cancel'
+]);
+
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer sk_test_your_api_key',
+        'Content-Type: application/json'
+    ]
+]);
+
+$response = curl_exec($ch);
+$session = json_decode($response, true);
+curl_close($ch);`
+                  }}
                 />
               </div>
 
@@ -1731,10 +1832,10 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
                 { name: 'metadata', type: 'object', description: 'Custom key-value pairs' },
               ]}
             />
-            <CodeBlock
-              title="Request"
-              language="bash"
-              code={\`curl -X POST \${API_BASE}/bank-accounts \\
+            <MultiLanguageCodeBlock
+              title="Create Bank Account"
+              examples={{
+                curl: `curl -X POST ${API_BASE}/bank-accounts \\
   -H "Authorization: Bearer sk_test_..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1743,15 +1844,125 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
     "routing_number": "110000000",
     "account_type": "checking",
     "verification_method": "microdeposit",
-    "metadata": {
-      "department": "payroll"
+    "metadata": { "department": "payroll" }
+  }'`,
+                javascript: `const response = await fetch('${API_BASE}/bank-accounts', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    holder_name: 'Acme Corp',
+    account_number: '000123456789',
+    routing_number: '110000000',
+    account_type: 'checking',
+    verification_method: 'microdeposit',
+    metadata: { department: 'payroll' }
+  })
+});
+
+const bankAccount = await response.json();`,
+                python: `import requests
+
+response = requests.post(
+    '${API_BASE}/bank-accounts',
+    headers={
+        'Authorization': 'Bearer sk_test_...',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'holder_name': 'Acme Corp',
+        'account_number': '000123456789',
+        'routing_number': '110000000',
+        'account_type': 'checking',
+        'verification_method': 'microdeposit',
+        'metadata': {'department': 'payroll'}
     }
-  }'\`}
+)
+
+bank_account = response.json()`,
+                ruby: `require 'net/http'
+require 'json'
+require 'uri'
+
+uri = URI('${API_BASE}/bank-accounts')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(uri)
+request['Authorization'] = 'Bearer sk_test_...'
+request['Content-Type'] = 'application/json'
+request.body = {
+  holder_name: 'Acme Corp',
+  account_number: '000123456789',
+  routing_number: '110000000',
+  account_type: 'checking',
+  verification_method: 'microdeposit',
+  metadata: { department: 'payroll' }
+}.to_json
+
+response = http.request(request)
+bank_account = JSON.parse(response.body)`,
+                go: `package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "net/http"
+)
+
+func createBankAccount() {
+    payload := map[string]interface{}{
+        "holder_name":         "Acme Corp",
+        "account_number":      "000123456789",
+        "routing_number":      "110000000",
+        "account_type":        "checking",
+        "verification_method": "microdeposit",
+        "metadata":            map[string]string{"department": "payroll"},
+    }
+
+    body, _ := json.Marshal(payload)
+    req, _ := http.NewRequest("POST", "${API_BASE}/bank-accounts", bytes.NewBuffer(body))
+    req.Header.Set("Authorization", "Bearer sk_test_...")
+    req.Header.Set("Content-Type", "application/json")
+
+    client := &http.Client{}
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+}`,
+                php: `<?php
+
+$ch = curl_init('${API_BASE}/bank-accounts');
+
+$payload = json_encode([
+    'holder_name' => 'Acme Corp',
+    'account_number' => '000123456789',
+    'routing_number' => '110000000',
+    'account_type' => 'checking',
+    'verification_method' => 'microdeposit',
+    'metadata' => ['department' => 'payroll']
+]);
+
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer sk_test_...',
+        'Content-Type: application/json'
+    ]
+]);
+
+$response = curl_exec($ch);
+$bankAccount = json_decode($response, true);
+curl_close($ch);`
+              }}
             />
             <CodeBlock
               title="Response"
               language="json"
-              code={\`{
+              code={`{
   "id": "ba_1a2b3c4d5e6f",
   "holder_name": "Acme Corp",
   "account_type": "checking",
@@ -1765,7 +1976,7 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
   "is_active": true,
   "is_default": false,
   "created_at": "2024-01-15T10:30:00Z"
-}\`}
+}`}
             />
           </EndpointCard>
 
@@ -1787,22 +1998,22 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
             <CodeBlock
               title="Request"
               language="bash"
-              code={\`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify \\
+              code={`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify \\
   -H "Authorization: Bearer sk_test_..." \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount_1": 32,
     "amount_2": 45
-  }'\`}
+  }'`}
             />
             <CodeBlock
               title="Response"
               language="json"
-              code={\`{
+              code={`{
   "id": "ba_1a2b3c4d5e6f",
   "verification_status": "verified",
   "verified_at": "2024-01-17T14:22:00Z"
-}\`}
+}`}
             />
             <div className="mt-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <div className="flex items-start gap-3">
@@ -1840,7 +2051,7 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
             <CodeBlock
               title="Request"
               language="bash"
-              code={\`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates \\
+              code={`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates \\
   -H "Authorization: Bearer sk_test_..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1850,12 +2061,12 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
     "ip_address": "192.168.1.1",
     "amount_limit": 100000,
     "monthly_limit": 500000
-  }'\`}
+  }'`}
             />
             <CodeBlock
               title="Response"
               language="json"
-              code={\`{
+              code={`{
   "id": "mandate_abc123",
   "bank_account_id": "ba_1a2b3c4d5e6f",
   "authorization_type": "debit",
@@ -1865,7 +2076,7 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
   "status": "active",
   "accepted_at": "2024-01-17T14:30:00Z",
   "created_at": "2024-01-17T14:30:00Z"
-}\`}
+}`}
             />
           </EndpointCard>
 
@@ -1895,7 +2106,7 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
             <CodeBlock
               title="Request - Debit (Pull Funds)"
               language="bash"
-              code={\`curl -X POST \${API_BASE}/bank-transfers \\
+              code={`curl -X POST \${API_BASE}/bank-transfers \\
   -H "Authorization: Bearer sk_test_..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1905,12 +2116,12 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
     "amount": 50000,
     "statement_descriptor": "ACME INV",
     "invoice_id": "inv_xyz789"
-  }'\`}
+  }'`}
             />
             <CodeBlock
               title="Response"
               language="json"
-              code={\`{
+              code={`{
   "id": "bt_transfer123",
   "bank_account_id": "ba_1a2b3c4d5e6f",
   "mandate_id": "mandate_abc123",
@@ -1922,7 +2133,7 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
   "expected_settlement_at": "2024-01-20T00:00:00Z",
   "initiated_at": "2024-01-17T15:00:00Z",
   "created_at": "2024-01-17T15:00:00Z"
-}\`}
+}`}
             />
           </EndpointCard>
 
