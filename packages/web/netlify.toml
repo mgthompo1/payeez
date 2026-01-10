@@ -1,5 +1,5 @@
 [build]
-  command = "cd ../.. && rm -rf node_modules && npm install && cd packages/web && npm run build"
+  command = "cd ../.. && rm -rf node_modules package-lock.json && npm install && cd packages/web && npm run build"
   publish = ".next"
 
 [build.environment]
