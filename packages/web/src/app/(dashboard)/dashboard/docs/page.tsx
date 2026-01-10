@@ -183,7 +183,7 @@ export default function DocsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header * /}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">API Documentation</h1>
@@ -195,7 +195,7 @@ export default function DocsPage() {
         </div>
       </div>
 
-      {/* Base URL * /}
+      {/* Base URL */}
       <div className="rounded-xl bg-[#111] border border-white/10 p-4 flex items-center gap-4">
         <Globe className="h-5 w-5 text-gray-500" />
         <div>
@@ -242,7 +242,7 @@ export default function DocsPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Quick Start * /}
+          {/* Quick Start */}
           {activeTab === 'quickstart' && (
             <div className="space-y-6">
           <div className="rounded-2xl bg-gradient-to-br from-[#19d1c3]/10 to-[#c8ff5a]/10 border border-[#19d1c3]/20 p-6">
@@ -251,7 +251,7 @@ export default function DocsPage() {
           </div>
 
           <div className="grid gap-6">
-            {/* Step 1 * /}
+            {/* Step 1 */}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-[#19d1c3]/10 flex items-center justify-center text-[#19d1c3] font-bold text-sm">1</div>
@@ -268,7 +268,7 @@ pnpm add @atlas/sdk`}
               />
             </div>
 
-            {/* Step 2 * /}
+            {/* Step 2 */}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-[#19d1c3]/10 flex items-center justify-center text-[#19d1c3] font-bold text-sm">2</div>
@@ -301,7 +301,7 @@ const session = await response.json();
               />
             </div>
 
-            {/* Step 3 * /}
+            {/* Step 3 */}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-[#c8ff5a]/10 flex items-center justify-center text-[#c8ff5a] font-bold text-sm">3</div>
@@ -348,7 +348,7 @@ function CheckoutPage({ sessionId, clientSecret }) {
               />
             </div>
 
-            {/* Step 4 * /}
+            {/* Step 4 */}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-400 font-bold text-sm">4</div>
@@ -410,7 +410,7 @@ ${timestamp}.${payload}
         </div>
       )}
 
-      {/* Authentication * /}
+      {/* Authentication */}
       {activeTab === 'authentication' && (
         <div className="space-y-6">
           <SectionHeader
@@ -510,7 +510,7 @@ ${timestamp}.${payload}
         </div>
       )}
 
-      {/* Sessions * /}
+      {/* Sessions */}
       {activeTab === 'sessions' && (
         <div className="space-y-6">
           <SectionHeader
@@ -588,7 +588,7 @@ ${timestamp}.${payload}
         </div>
       )}
 
-      {/* Payments * /}
+      {/* Payments */}
       {activeTab === 'payments' && (
         <div className="space-y-6">
           <SectionHeader
@@ -729,7 +729,7 @@ ${timestamp}.${payload}
         </div>
       )}
 
-      {/* 3D Secure * /}
+      {/* 3D Secure */}
       {activeTab === '3ds' && (
         <div className="space-y-6">
           <SectionHeader
@@ -858,7 +858,7 @@ await Atlas.confirm();`}
         </div>
       )}
 
-      {/* Network Tokens * /}
+      {/* Network Tokens */}
       {activeTab === 'network-tokens' && (
         <div className="space-y-6">
           <SectionHeader
@@ -979,7 +979,7 @@ await Atlas.confirm('card', { networkToken: true });`}
         </div>
       )}
 
-      {/* Card Collection Proxy * /}
+      {/* Card Collection Proxy */}
       {activeTab === 'card-proxy' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1147,7 +1147,7 @@ X-Atlas-Token-Intent: ti_9xN3oP5wQ8
         </div>
       )}
 
-      {/* Webhooks * /}
+      {/* Webhooks */}
       {activeTab === 'webhooks' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1280,7 +1280,7 @@ ${timestamp}.${payload}
         </div>
       )}
 
-      {/* SDK Reference * /}
+      {/* SDK Reference */}
       {activeTab === 'sdk' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1461,7 +1461,7 @@ const isValid = signature && crypto.timingSafeEqual(
         </div>
       )}
 
-      {/* Errors * /}
+      {/* Errors */}
       {activeTab === 'errors' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1569,7 +1569,7 @@ const isValid = signature && crypto.timingSafeEqual(
         </div>
       )}
 
-      {/* Testing * /}
+      {/* Testing */}
       {activeTab === 'testing' && (
         <div className="space-y-6">
           <SectionHeader
