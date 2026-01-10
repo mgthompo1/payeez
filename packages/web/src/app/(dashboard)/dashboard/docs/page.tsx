@@ -22,7 +22,11 @@ import {
   Lock,
   Server,
   FileCode,
-  BookOpen
+  BookOpen,
+  Repeat,
+  Users,
+  Receipt,
+  Package
 } from 'lucide-react'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.atlas.co/functions/v1'
@@ -172,6 +176,10 @@ export default function DocsPage() {
     { id: 'authentication', label: 'Authentication', icon: Key },
     { id: 'sessions', label: 'Sessions', icon: Code2 },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'billing', label: 'Billing', icon: Repeat },
+    { id: 'customers', label: 'Customers', icon: Users },
+    { id: 'invoices', label: 'Invoices', icon: Receipt },
+    { id: 'checkout', label: 'Checkout & Portal', icon: Building2 },
     { id: '3ds', label: '3D Secure', icon: Shield },
     { id: 'network-tokens', label: 'Network Tokens', icon: Zap },
     { id: 'card-proxy', label: 'Card Collection', icon: Server },
@@ -1654,6 +1662,452 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
                   <span className="text-sm text-gray-400">{item}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Billing / Subscriptions */}
+      {activeTab === 'billing' && (
+        <div className="space-y-6">
+          <SectionHeader
+            icon={Repeat}
+            title="Billing & Subscriptions"
+            description="Create and manage recurring subscriptions with products, prices, and billing cycles"
+          />
+
+          <div className="rounded-2xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Stripe-like Subscription Billing</h2>
+            <p className="text-gray-400 text-sm">Build advanced billing logic with products, recurring prices, trials, usage-based billing, and automatic invoicing.</p>
+          </div>
+
+          {/* Products */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Products</h3>
+            <EndpointCard method="POST" path="/products" description="Create a product">
+              <ParamTable params={[
+                { name: 'name', type: 'string', required: true, description: 'Product name displayed to customers' },
+                { name: 'description', type: 'string', description: 'Optional product description' },
+                { name: 'metadata', type: 'object', description: 'Key-value pairs for your use' },
+              ]} />
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/products \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Pro Plan",
+    "description": "Full access to all features",
+    "metadata": { "tier": "pro" }
+  }'`} />
+            </EndpointCard>
+
+            <EndpointCard method="GET" path="/products" description="List all products">
+              <CodeBlock title="Response" language="json" code={`{
+  "object": "list",
+  "data": [
+    {
+      "id": "prod_xxx",
+      "object": "product",
+      "name": "Pro Plan",
+      "description": "Full access to all features",
+      "active": true,
+      "metadata": { "tier": "pro" },
+      "created": 1704844800
+    }
+  ],
+  "has_more": false,
+  "total_count": 1
+}`} />
+            </EndpointCard>
+          </div>
+
+          {/* Prices */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Prices</h3>
+            <EndpointCard method="POST" path="/prices" description="Create a price">
+              <ParamTable params={[
+                { name: 'product', type: 'string', required: true, description: 'Product ID to attach price to' },
+                { name: 'currency', type: 'string', required: true, description: '3-letter ISO currency code (e.g. usd)' },
+                { name: 'unit_amount', type: 'integer', description: 'Amount in cents (e.g. 2999 = $29.99)' },
+                { name: 'type', type: 'string', description: 'one_time or recurring (default: one_time)' },
+                { name: 'recurring', type: 'object', description: 'Recurring billing config', children: [
+                  { name: 'interval', type: 'string', description: 'day, week, month, or year' },
+                  { name: 'interval_count', type: 'integer', description: 'Number of intervals (default: 1)' },
+                  { name: 'usage_type', type: 'string', description: 'licensed or metered' },
+                ] },
+              ]} />
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/prices \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "product": "prod_xxx",
+    "currency": "usd",
+    "unit_amount": 2999,
+    "type": "recurring",
+    "recurring": {
+      "interval": "month",
+      "interval_count": 1
+    }
+  }'`} />
+            </EndpointCard>
+          </div>
+
+          {/* Subscriptions */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Subscriptions</h3>
+            <EndpointCard method="POST" path="/subscriptions" description="Create a subscription">
+              <ParamTable params={[
+                { name: 'customer', type: 'string', required: true, description: 'Customer ID' },
+                { name: 'items', type: 'array', required: true, description: 'Array of { price: "price_xxx", quantity: 1 }' },
+                { name: 'trial_period_days', type: 'integer', description: 'Free trial days before billing' },
+                { name: 'cancel_at_period_end', type: 'boolean', description: 'Cancel at end of current period' },
+                { name: 'metadata', type: 'object', description: 'Key-value pairs for your use' },
+              ]} />
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/subscriptions \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "customer": "cus_xxx",
+    "items": [{ "price": "price_xxx", "quantity": 1 }],
+    "trial_period_days": 14
+  }'`} />
+            </EndpointCard>
+
+            <EndpointCard method="POST" path="/subscriptions/:id/pause" description="Pause a subscription">
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/subscriptions/sub_xxx/pause \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+            </EndpointCard>
+
+            <EndpointCard method="POST" path="/subscriptions/:id/resume" description="Resume a paused subscription">
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/subscriptions/sub_xxx/resume \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+            </EndpointCard>
+
+            <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
+              <h4 className="font-semibold text-white">Subscription Statuses</h4>
+              <div className="grid md:grid-cols-2 gap-3">
+                {[
+                  { status: 'trialing', desc: 'Customer is in free trial period' },
+                  { status: 'active', desc: 'Subscription is active and billing' },
+                  { status: 'past_due', desc: 'Payment failed, retrying' },
+                  { status: 'paused', desc: 'Subscription paused by request' },
+                  { status: 'canceled', desc: 'Subscription has been canceled' },
+                  { status: 'unpaid', desc: 'All retries exhausted, not canceled' },
+                ].map((item) => (
+                  <div key={item.status} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <code className="text-xs text-violet-400">{item.status}</code>
+                    <span className="text-xs text-gray-500">{item.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Usage Records */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Usage Records (Metered Billing)</h3>
+            <EndpointCard method="POST" path="/usage-records" description="Report usage for a metered subscription item">
+              <ParamTable params={[
+                { name: 'subscription_item', type: 'string', required: true, description: 'Subscription item ID' },
+                { name: 'quantity', type: 'integer', required: true, description: 'Usage quantity to record' },
+                { name: 'action', type: 'string', description: 'increment or set (default: increment)' },
+                { name: 'timestamp', type: 'integer', description: 'Unix timestamp (default: now)' },
+              ]} />
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/usage-records \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "subscription_item": "si_xxx",
+    "quantity": 150,
+    "action": "increment"
+  }'`} />
+            </EndpointCard>
+          </div>
+
+          {/* Coupons */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Coupons</h3>
+            <EndpointCard method="POST" path="/coupons" description="Create a coupon">
+              <ParamTable params={[
+                { name: 'duration', type: 'string', required: true, description: 'once, repeating, or forever' },
+                { name: 'percent_off', type: 'number', description: 'Percentage discount (0-100)' },
+                { name: 'amount_off', type: 'integer', description: 'Fixed amount off in cents' },
+                { name: 'currency', type: 'string', description: 'Required if using amount_off' },
+                { name: 'duration_in_months', type: 'integer', description: 'Required if duration is repeating' },
+                { name: 'max_redemptions', type: 'integer', description: 'Max times coupon can be used' },
+                { name: 'redeem_by', type: 'integer', description: 'Unix timestamp when coupon expires' },
+              ]} />
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/coupons \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "id": "SAVE20",
+    "percent_off": 20,
+    "duration": "repeating",
+    "duration_in_months": 3
+  }'`} />
+            </EndpointCard>
+          </div>
+        </div>
+      )}
+
+      {/* Customers */}
+      {activeTab === 'customers' && (
+        <div className="space-y-6">
+          <SectionHeader
+            icon={Users}
+            title="Customers"
+            description="Create and manage customer records for billing"
+          />
+
+          <EndpointCard method="POST" path="/customers" description="Create a customer" defaultExpanded>
+            <ParamTable params={[
+              { name: 'email', type: 'string', required: true, description: 'Customer email address' },
+              { name: 'name', type: 'string', description: 'Customer full name' },
+              { name: 'phone', type: 'string', description: 'Customer phone number' },
+              { name: 'metadata', type: 'object', description: 'Key-value pairs for your use' },
+              { name: 'address', type: 'object', description: 'Customer billing address', children: [
+                { name: 'line1', type: 'string', description: 'Street address' },
+                { name: 'city', type: 'string', description: 'City' },
+                { name: 'state', type: 'string', description: 'State or province' },
+                { name: 'postal_code', type: 'string', description: 'ZIP or postal code' },
+                { name: 'country', type: 'string', description: 'Two-letter country code' },
+              ] },
+            ]} />
+            <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/customers \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "email": "customer@example.com",
+    "name": "Jane Doe",
+    "metadata": { "user_id": "123" }
+  }'`} />
+            <CodeBlock title="Response" language="json" code={`{
+  "id": "cus_xxx",
+  "object": "customer",
+  "email": "customer@example.com",
+  "name": "Jane Doe",
+  "metadata": { "user_id": "123" },
+  "created": 1704844800
+}`} />
+          </EndpointCard>
+
+          <EndpointCard method="GET" path="/customers" description="List all customers">
+            <CodeBlock title="Request" language="bash" code={`curl ${API_BASE}/customers?limit=10 \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+          </EndpointCard>
+
+          <EndpointCard method="GET" path="/customers/:id" description="Retrieve a customer">
+            <CodeBlock title="Request" language="bash" code={`curl ${API_BASE}/customers/cus_xxx \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+          </EndpointCard>
+
+          <EndpointCard method="PATCH" path="/customers/:id" description="Update a customer">
+            <CodeBlock title="Request" language="bash" code={`curl -X PATCH ${API_BASE}/customers/cus_xxx \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "name": "Jane Smith" }'`} />
+          </EndpointCard>
+
+          <EndpointCard method="DELETE" path="/customers/:id" description="Delete a customer">
+            <CodeBlock title="Request" language="bash" code={`curl -X DELETE ${API_BASE}/customers/cus_xxx \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+          </EndpointCard>
+        </div>
+      )}
+
+      {/* Invoices */}
+      {activeTab === 'invoices' && (
+        <div className="space-y-6">
+          <SectionHeader
+            icon={Receipt}
+            title="Invoices"
+            description="Create, manage, and collect payment on invoices"
+          />
+
+          <EndpointCard method="POST" path="/invoices" description="Create an invoice" defaultExpanded>
+            <ParamTable params={[
+              { name: 'customer', type: 'string', required: true, description: 'Customer ID to bill' },
+              { name: 'auto_advance', type: 'boolean', description: 'Auto-finalize after 1 hour (default: true)' },
+              { name: 'collection_method', type: 'string', description: 'charge_automatically or send_invoice' },
+              { name: 'days_until_due', type: 'integer', description: 'Days until payment is due' },
+              { name: 'description', type: 'string', description: 'Invoice description' },
+            ]} />
+            <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/invoices \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "customer": "cus_xxx",
+    "collection_method": "send_invoice",
+    "days_until_due": 30
+  }'`} />
+          </EndpointCard>
+
+          <EndpointCard method="GET" path="/invoices" description="List all invoices">
+            <ParamTable params={[
+              { name: 'customer', type: 'string', description: 'Filter by customer ID' },
+              { name: 'status', type: 'string', description: 'Filter by status (draft, open, paid, void)' },
+              { name: 'subscription', type: 'string', description: 'Filter by subscription ID' },
+            ]} />
+          </EndpointCard>
+
+          <EndpointCard method="POST" path="/invoices/:id/finalize" description="Finalize a draft invoice">
+            <p className="text-sm text-gray-400">Transitions invoice from draft to open, making it ready for payment.</p>
+            <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/invoices/inv_xxx/finalize \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+          </EndpointCard>
+
+          <EndpointCard method="POST" path="/invoices/:id/pay" description="Pay an invoice">
+            <p className="text-sm text-gray-400">Attempt to collect payment on an open invoice.</p>
+            <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/invoices/inv_xxx/pay \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+          </EndpointCard>
+
+          <EndpointCard method="POST" path="/invoices/:id/void" description="Void an invoice">
+            <p className="text-sm text-gray-400">Permanently void an invoice. Cannot be undone.</p>
+            <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/invoices/inv_xxx/void \\
+  -H "Authorization: Bearer sk_test_xxx"`} />
+          </EndpointCard>
+
+          <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
+            <h4 className="font-semibold text-white">Invoice Statuses</h4>
+            <div className="grid md:grid-cols-2 gap-3">
+              {[
+                { status: 'draft', desc: 'Invoice is being prepared, not yet sent' },
+                { status: 'open', desc: 'Invoice has been finalized and sent' },
+                { status: 'paid', desc: 'Invoice has been paid in full' },
+                { status: 'void', desc: 'Invoice was canceled and is invalid' },
+                { status: 'uncollectible', desc: 'Payment attempts exhausted' },
+              ].map((item) => (
+                <div key={item.status} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                  <code className="text-xs text-violet-400">{item.status}</code>
+                  <span className="text-xs text-gray-500">{item.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Checkout & Portal Sessions */}
+      {activeTab === 'checkout' && (
+        <div className="space-y-6">
+          <SectionHeader
+            icon={Building2}
+            title="Checkout & Portal Sessions"
+            description="Create hosted payment pages for checkout and customer self-service"
+          />
+
+          <div className="rounded-2xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Hosted Payment Pages</h2>
+            <p className="text-gray-400 text-sm">Pre-built, conversion-optimized pages for checkout and customer management. No frontend code required.</p>
+          </div>
+
+          {/* Checkout Sessions */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Checkout Sessions</h3>
+            <EndpointCard method="POST" path="/checkout-sessions" description="Create a checkout session" defaultExpanded>
+              <ParamTable params={[
+                { name: 'mode', type: 'string', required: true, description: 'payment or subscription' },
+                { name: 'line_items', type: 'array', required: true, description: 'Array of { price: "price_xxx", quantity: 1 }' },
+                { name: 'success_url', type: 'string', required: true, description: 'Redirect URL after successful payment' },
+                { name: 'cancel_url', type: 'string', required: true, description: 'Redirect URL if customer cancels' },
+                { name: 'customer', type: 'string', description: 'Existing customer ID' },
+                { name: 'customer_email', type: 'string', description: 'Pre-fill customer email' },
+                { name: 'subscription_data', type: 'object', description: 'Subscription options', children: [
+                  { name: 'trial_period_days', type: 'integer', description: 'Free trial days' },
+                ] },
+              ]} />
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/checkout-sessions \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "mode": "subscription",
+    "line_items": [{ "price": "price_xxx", "quantity": 1 }],
+    "success_url": "https://yoursite.com/success?session_id={CHECKOUT_SESSION_ID}",
+    "cancel_url": "https://yoursite.com/canceled",
+    "subscription_data": { "trial_period_days": 14 }
+  }'`} />
+              <CodeBlock title="Response" language="json" code={`{
+  "id": "cs_xxx",
+  "object": "checkout.session",
+  "url": "https://atlas.io/checkout/abc123",
+  "mode": "subscription",
+  "status": "open",
+  "expires_at": 1704931200
+}`} />
+            </EndpointCard>
+
+            <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
+              <h4 className="font-semibold text-white">Redirect to Checkout</h4>
+              <p className="text-sm text-gray-400">After creating a session, redirect the customer to the returned URL:</p>
+              <CodeBlock title="JavaScript" language="javascript" code={`const response = await fetch('/api/create-checkout', { method: 'POST' });
+const { url } = await response.json();
+
+// Redirect to hosted checkout
+window.location.href = url;`} />
+            </div>
+          </div>
+
+          {/* Portal Sessions */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Customer Portal Sessions</h3>
+            <EndpointCard method="POST" path="/portal-sessions" description="Create a portal session">
+              <ParamTable params={[
+                { name: 'customer', type: 'string', required: true, description: 'Customer ID' },
+                { name: 'return_url', type: 'string', required: true, description: 'URL to return to after portal' },
+                { name: 'configuration', type: 'object', description: 'Portal feature toggles', children: [
+                  { name: 'subscription_cancel', type: 'object', description: '{ enabled: boolean }' },
+                  { name: 'subscription_pause', type: 'object', description: '{ enabled: boolean }' },
+                  { name: 'payment_method_update', type: 'object', description: '{ enabled: boolean }' },
+                  { name: 'invoice_history', type: 'object', description: '{ enabled: boolean }' },
+                ] },
+              ]} />
+              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/portal-sessions \\
+  -H "Authorization: Bearer sk_test_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "customer": "cus_xxx",
+    "return_url": "https://yoursite.com/account",
+    "configuration": {
+      "features": {
+        "subscription_cancel": { "enabled": true },
+        "invoice_history": { "enabled": true }
+      }
+    }
+  }'`} />
+              <CodeBlock title="Response" language="json" code={`{
+  "id": "bps_xxx",
+  "object": "billing_portal.session",
+  "url": "https://atlas.io/portal/xyz789",
+  "customer": "cus_xxx",
+  "return_url": "https://yoursite.com/account",
+  "expires_at": 1704848400
+}`} />
+            </EndpointCard>
+
+            <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
+              <h4 className="font-semibold text-white">Portal Features</h4>
+              <p className="text-sm text-gray-400">Customers can manage their billing through the portal:</p>
+              <div className="grid md:grid-cols-2 gap-3 mt-4">
+                {[
+                  { feature: 'View subscriptions', desc: 'See all active and past subscriptions' },
+                  { feature: 'Cancel subscription', desc: 'Cancel at end of billing period' },
+                  { feature: 'Pause subscription', desc: 'Temporarily pause billing' },
+                  { feature: 'Update payment method', desc: 'Change default card' },
+                  { feature: 'View invoices', desc: 'See and download past invoices' },
+                  { feature: 'Download receipts', desc: 'Get PDF receipts for payments' },
+                ].map((item) => (
+                  <div key={item.feature} className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                    <div className="h-5 w-5 rounded bg-green-500/20 flex items-center justify-center mt-0.5">
+                      <Check className="h-3 w-3 text-green-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-white">{item.feature}</div>
+                      <div className="text-xs text-gray-500">{item.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

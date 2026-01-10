@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Globe, Shield, Bell, FlaskConical, Settings2, Loader2, Key, Plus, Copy, Eye, EyeOff, Trash2, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Building2, Globe, Shield, Bell, FlaskConical, Settings2, Loader2, Key, Plus, Copy, Eye, EyeOff, Trash2, AlertTriangle, RefreshCw, Puzzle, Package, Smartphone } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getApiKeys, createApiKey, revokeApiKey, onboardUser, type ApiKey, type CreateKeyResult } from '../api-keys/actions'
 
@@ -970,40 +971,187 @@ function ApiKeysTab() {
   )
 }
 
+// ===== INTEGRATIONS TAB =====
+const integrationStatusStyles: Record<string, string> = {
+  available: 'bg-green-500/10 text-green-400 border-green-500/20',
+  scaffold: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  planned: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+}
+
+function IntegrationsTab() {
+  const commerceIntegrations = [
+    {
+      name: 'WooCommerce',
+      status: 'scaffold',
+      description: 'Drop-in gateway plugin with Atlas sessions + tokenization.',
+      path: 'packages/integrations/atlas-woocommerce',
+    },
+    {
+      name: 'Salesforce Commerce',
+      status: 'scaffold',
+      description: 'SFRA cartridge with payment sessions, 3DS, and webhooks.',
+      path: 'packages/integrations/atlas-salesforce-commerce-cloud',
+    },
+    {
+      name: 'Salesforce OMS',
+      status: 'scaffold',
+      description: 'Apex classes and LWC for Order Management payments.',
+      path: 'packages/integrations/atlas-salesforce-oms',
+    },
+    {
+      name: 'Shopware 6',
+      status: 'scaffold',
+      description: 'Payment app with checkout and admin configuration.',
+      path: 'packages/integrations/shopware',
+    },
+  ]
+
+  const mobileIntegrations = [
+    {
+      name: 'iOS (Swift)',
+      status: 'planned',
+      description: 'Native components for Apple Pay + card tokenization.',
+    },
+    {
+      name: 'React Native',
+      status: 'planned',
+      description: 'Cross-platform drop-in UI with Atlas Elements.',
+    },
+    {
+      name: 'Flutter',
+      status: 'planned',
+      description: 'Flutter plugin for Elements and confirmation flow.',
+    },
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* Commerce Platforms */}
+      <div className="rounded-2xl bg-[#111] border border-white/10 overflow-hidden">
+        <div className="p-6 border-b border-white/10 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-[#19d1c3]/10 flex items-center justify-center">
+            <Package className="h-5 w-5 text-[#19d1c3]" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Commerce Platforms</h2>
+            <p className="text-sm text-gray-500">Scaffolds and starter kits for common platforms</p>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            {commerceIntegrations.map((integration) => (
+              <div key={integration.name} className="rounded-xl border border-white/10 bg-[#0a0a0a] p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-white">{integration.name}</div>
+                  <Badge className={integrationStatusStyles[integration.status]}>
+                    {integration.status}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-500">{integration.description}</p>
+                <div className="text-xs text-gray-400">
+                  <code className="text-[#19d1c3]">{integration.path}</code>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile SDKs */}
+      <div className="rounded-2xl bg-[#111] border border-white/10 overflow-hidden">
+        <div className="p-6 border-b border-white/10 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-[#c8ff5a]/10 flex items-center justify-center">
+            <Smartphone className="h-5 w-5 text-[#c8ff5a]" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Mobile SDKs</h2>
+            <p className="text-sm text-gray-500">Native drop-in components with tokenization</p>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            {mobileIntegrations.map((integration) => (
+              <div key={integration.name} className="rounded-xl border border-white/10 bg-[#0a0a0a] p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-white">{integration.name}</div>
+                  <Badge className={integrationStatusStyles[integration.status]}>
+                    {integration.status}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-500">{integration.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Integration CTA */}
+      <div className="rounded-2xl bg-gradient-to-br from-[#0c131b] via-[#0a0f14] to-[#0c131b] border border-white/10 p-6 flex items-center justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-semibold text-white">Need a custom integration?</div>
+          <div className="text-sm text-gray-500">We can build bespoke adapters for ERPs, PSPs, and platforms.</div>
+        </div>
+        <Button className="bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a] hover:opacity-90 text-black font-semibold">
+          Contact Support
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// ===== SETTINGS TABS CONTENT =====
+function SettingsTabs() {
+  const searchParams = useSearchParams()
+  const defaultTab = searchParams.get('tab') || 'general'
+
+  return (
+    <Tabs defaultValue={defaultTab} className="space-y-6">
+      <TabsList className="bg-[#111] border border-white/10 p-1">
+        <TabsTrigger value="general" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
+          <Settings2 className="h-4 w-4 mr-2" />General
+        </TabsTrigger>
+        <TabsTrigger value="api-keys" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
+          <Key className="h-4 w-4 mr-2" />API Keys
+        </TabsTrigger>
+        <TabsTrigger value="integrations" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
+          <Puzzle className="h-4 w-4 mr-2" />Integrations
+        </TabsTrigger>
+        <TabsTrigger value="test" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
+          <FlaskConical className="h-4 w-4 mr-2" />Test Payments
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="general">
+        <GeneralSettingsTab />
+      </TabsContent>
+
+      <TabsContent value="api-keys">
+        <ApiKeysTab />
+      </TabsContent>
+
+      <TabsContent value="integrations">
+        <IntegrationsTab />
+      </TabsContent>
+
+      <TabsContent value="test">
+        <TestPaymentsTab />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
 // ===== MAIN PAGE =====
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your account, API keys, and test payments</p>
+        <p className="text-gray-500 mt-1">Manage your account, API keys, and integrations</p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="bg-[#111] border border-white/10 p-1">
-          <TabsTrigger value="general" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
-            <Settings2 className="h-4 w-4 mr-2" />General
-          </TabsTrigger>
-          <TabsTrigger value="api-keys" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
-            <Key className="h-4 w-4 mr-2" />API Keys
-          </TabsTrigger>
-          <TabsTrigger value="test" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
-            <FlaskConical className="h-4 w-4 mr-2" />Test Payments
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="general">
-          <GeneralSettingsTab />
-        </TabsContent>
-
-        <TabsContent value="api-keys">
-          <ApiKeysTab />
-        </TabsContent>
-
-        <TabsContent value="test">
-          <TestPaymentsTab />
-        </TabsContent>
-      </Tabs>
+      <Suspense fallback={<div className="h-10 bg-[#111] rounded-lg animate-pulse" />}>
+        <SettingsTabs />
+      </Suspense>
     </div>
   )
 }

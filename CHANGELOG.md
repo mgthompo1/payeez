@@ -52,6 +52,147 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-01-10
+
+### Added
+
+#### Subscriptions & Recurring Billing
+
+**Full Stripe-like subscription billing system:**
+
+- **Products API** (`/products`)
+  - Create and manage products with metadata
+  - Link to multiple pricing tiers
+  - Soft delete support
+
+- **Prices API** (`/prices`)
+  - One-time and recurring pricing
+  - Billing schemes: `per_unit`, `tiered`
+  - Usage types: `licensed`, `metered`
+  - Intervals: `day`, `week`, `month`, `year` with custom counts
+  - Metered aggregation: `sum`, `max`, `last_during_period`, `last_ever`
+
+- **Subscriptions API** (`/subscriptions`)
+  - Full lifecycle: `trialing` → `active` → `past_due` → `canceled`/`unpaid`/`paused`
+  - Trial periods with/without payment method
+  - Pause/resume functionality
+  - Cancel at period end
+  - Proration support for mid-cycle changes
+
+- **Subscription Items API** (`/subscription-items`)
+  - Add/remove/update items on subscriptions
+  - Quantity changes with proration
+
+- **Usage Records API** (`/usage-records`)
+  - Report metered usage for subscription items
+  - Usage summaries with aggregation
+
+- **Invoices API** (`/invoices`)
+  - Invoice lifecycle: `draft` → `open` → `paid`/`void`/`uncollectible`
+  - Line items with descriptions and amounts
+  - Actions: finalize, pay, void, mark-uncollectible
+  - Automatic invoice generation for subscriptions
+
+- **Coupons API** (`/coupons`)
+  - Percentage or fixed amount discounts
+  - Duration modes: `once`, `repeating`, `forever`
+  - Max redemptions and expiry dates
+  - Product-specific coupons
+
+- **Billing Engine** (scheduled function)
+  - Automatic invoice generation 1 day before period end
+  - Smart retry scheduler (immediate, 1d, 3d, 7d, 14d)
+  - Trial ending notifications
+  - Automatic subscription cancellation after retry exhaustion
+
+- **Transactional Emails** (Resend integration)
+  - Invoice email with pay link when invoice is finalized
+  - Payment receipt/confirmation on successful charge
+  - Payment failed notification with retry date
+  - Trial ending reminder (3 days before)
+  - Subscription canceled confirmation
+  - Custom domain: `atlaspay.cc`
+  - Styled HTML templates matching Atlas branding
+
+#### Hosted Payment Pages
+
+- **Checkout Sessions API** (`/checkout-sessions`)
+  - Create hosted checkout for one-time payments and subscriptions
+  - Secure access tokens
+  - Customizable success/cancel URLs
+  - Customer pre-fill support
+
+- **Portal Sessions API** (`/portal-sessions`)
+  - Customer self-service portal
+  - Configurable features per session
+  - Subscription management
+  - Invoice history access
+
+- **Hosted Checkout Page** (`/checkout/[token]`)
+  - Order summary with line items
+  - Guest checkout with email collection
+  - Trial period display
+  - Subscription billing info
+  - Redirect to success URL
+
+- **Customer Portal** (`/portal/[token]`)
+  - View active subscriptions
+  - Pause/resume/cancel subscriptions
+  - Invoice history and downloads
+  - Payment method management
+
+- **Invoice Payment Page** (`/invoice/[token]`)
+  - Full invoice details with line items
+  - Pay now functionality
+  - Receipt download
+  - Status display (paid, void, uncollectible)
+
+#### Dashboard Updates
+
+- **Products Page** (`/dashboard/products`)
+  - Product list with expandable prices
+  - Create/edit product dialogs
+  - Price management with recurring options
+
+- **Customers Page** (`/dashboard/customers`)
+  - Customer list with search
+  - Customer detail sheet with subscriptions/invoices
+  - Subscription status overview
+
+- **Subscriptions Page** (`/dashboard/subscriptions`)
+  - Subscription list with status filtering
+  - MRR calculation
+  - Pause/resume/cancel actions
+  - Trial and billing period display
+
+- **Invoices Page** (`/dashboard/invoices`)
+  - Invoice list with status filtering
+  - Revenue stats cards
+  - Finalize/pay/void actions
+
+#### Database Schema
+
+**New tables (12 total):**
+- `customers` - Customer records with billing info
+- `products` - What merchants sell
+- `prices` - Pricing configurations
+- `subscriptions` - Active subscription records
+- `subscription_items` - Line items within subscriptions
+- `usage_records` - Metered usage tracking
+- `invoices` - Billing records
+- `invoice_line_items` - Individual charges
+- `coupons` - Discount templates
+- `customer_discounts` - Applied coupons
+- `portal_sessions` - Secure portal access
+- `checkout_sessions` - Hosted checkout sessions
+
+### Changed
+
+- Added navigation items for Customers, Products, Subscriptions, Invoices
+- Updated sidebar with new icons (Package, UserCircle, Repeat, Receipt)
+
+---
+
 ## [Unreleased]
 
 ### Added

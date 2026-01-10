@@ -9,6 +9,8 @@ Atlas provides a unified payment API that:
 - **Routes payments** to multiple PSPs (Stripe, Adyen, Authorize.net, Chase, Nuvei, dLocal, Braintree, Checkout.com, Airwallex)
 - **Provides fallback** if capture fails (redirect to PSP hosted checkout)
 - **Normalizes webhooks** across all PSPs
+- **Subscription billing** with products, prices, trials, and metered usage
+- **Hosted pages** for checkout, customer portal, and invoice payment
 
 ## Architecture
 
@@ -172,6 +174,62 @@ Atlas is **not** in PCI scope because:
 - PSP calls use Basis Theory's proxy to forward card data
 
 Your merchants complete their own SAQ based on their PSP.
+
+## Subscription Billing
+
+Atlas includes Stripe-like subscription billing:
+
+```javascript
+// Create a subscription
+const subscription = await fetch('https://api.atlas.co/functions/v1/subscriptions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_xxx',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    customer: 'cus_xxx',
+    items: [{ price: 'price_xxx', quantity: 1 }],
+    trial_period_days: 14,
+  }),
+});
+```
+
+Features:
+- **Products & Prices** - One-time and recurring pricing
+- **Subscriptions** - Full lifecycle management (trialing → active → canceled)
+- **Usage-based billing** - Metered pricing with aggregation
+- **Invoices** - Automatic invoice generation and collection
+- **Coupons** - Percentage and fixed-amount discounts
+
+## Hosted Pages
+
+Pre-built, conversion-optimized payment pages:
+
+```javascript
+// Create a checkout session
+const session = await fetch('https://api.atlas.co/functions/v1/checkout-sessions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_xxx',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    mode: 'subscription',
+    line_items: [{ price: 'price_xxx', quantity: 1 }],
+    success_url: 'https://yoursite.com/success',
+    cancel_url: 'https://yoursite.com/canceled',
+  }),
+});
+
+// Redirect customer to hosted checkout
+window.location.href = session.url;
+```
+
+Available pages:
+- **Checkout** - Collect payment for one-time purchases or subscriptions
+- **Customer Portal** - Self-service subscription and billing management
+- **Invoice** - View and pay individual invoices
 
 ## License
 
