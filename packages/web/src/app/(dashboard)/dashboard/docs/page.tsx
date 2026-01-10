@@ -422,9 +422,54 @@ app.post('/webhooks/atlas', express.raw({ type: 'application/json' }), (req, res
             <p className="text-sm text-slate-400">
               Include your API key in the <code className="text-cyan-400">Authorization</code> header as a Bearer token.
             </p>
-            <CodeBlock title="Example Request" language="bash" code={`curl ${API_BASE}/create-session \
-  -H "Authorization: Bearer sk_test_your_api_key" \
-  -H "Content-Type: application/json"`}
+            <MultiLanguageCodeBlock
+              title="Authenticated Request"
+              examples={{
+                curl: `curl ${API_BASE}/create-session \\
+  -H "Authorization: Bearer sk_test_your_api_key" \\
+  -H "Content-Type: application/json"`,
+                javascript: `const response = await fetch('${API_BASE}/create-session', {
+  headers: {
+    'Authorization': 'Bearer sk_test_your_api_key',
+    'Content-Type': 'application/json'
+  }
+});`,
+                python: `import requests
+
+response = requests.get(
+    '${API_BASE}/create-session',
+    headers={
+        'Authorization': 'Bearer sk_test_your_api_key',
+        'Content-Type': 'application/json'
+    }
+)`,
+                ruby: `require 'net/http'
+require 'uri'
+
+uri = URI('${API_BASE}/create-session')
+request = Net::HTTP::Get.new(uri)
+request['Authorization'] = 'Bearer sk_test_your_api_key'
+request['Content-Type'] = 'application/json'
+
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+response = http.request(request)`,
+                go: `req, _ := http.NewRequest("GET", "${API_BASE}/create-session", nil)
+req.Header.Set("Authorization", "Bearer sk_test_your_api_key")
+req.Header.Set("Content-Type", "application/json")
+
+client := &http.Client{}
+resp, _ := client.Do(req)`,
+                php: `$ch = curl_init('${API_BASE}/create-session');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer sk_test_your_api_key',
+        'Content-Type: application/json'
+    ]
+]);
+$response = curl_exec($ch);`
+              }}
             />
           </div>
 
@@ -445,11 +490,71 @@ app.post('/webhooks/atlas', express.raw({ type: 'application/json' }), (req, res
               Use idempotency keys to safely retry requests without accidentally performing the same operation twice.
               Include the <code className="text-cyan-400">Idempotency-Key</code> header with a unique value.
             </p>
-            <CodeBlock title="Idempotent Request" language="bash" code={`curl -X POST ${API_BASE}/create-session \
-  -H "Authorization: Bearer sk_test_your_api_key" \
-  -H "Idempotency-Key: order_12345_payment" \
-  -H "Content-Type: application/json" \
-  -d '{"amount": 4990, "currency": "USD"}'`}
+            <MultiLanguageCodeBlock
+              title="Idempotent Request"
+              examples={{
+                curl: `curl -X POST ${API_BASE}/create-session \\
+  -H "Authorization: Bearer sk_test_your_api_key" \\
+  -H "Idempotency-Key: order_12345_payment" \\
+  -H "Content-Type: application/json" \\
+  -d '{"amount": 4990, "currency": "USD"}'`,
+                javascript: `const response = await fetch('${API_BASE}/create-session', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_your_api_key',
+    'Idempotency-Key': 'order_12345_payment',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ amount: 4990, currency: 'USD' })
+});`,
+                python: `import requests
+
+response = requests.post(
+    '${API_BASE}/create-session',
+    headers={
+        'Authorization': 'Bearer sk_test_your_api_key',
+        'Idempotency-Key': 'order_12345_payment',
+        'Content-Type': 'application/json'
+    },
+    json={'amount': 4990, 'currency': 'USD'}
+)`,
+                ruby: `require 'net/http'
+require 'json'
+
+uri = URI('${API_BASE}/create-session')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(uri)
+request['Authorization'] = 'Bearer sk_test_your_api_key'
+request['Idempotency-Key'] = 'order_12345_payment'
+request['Content-Type'] = 'application/json'
+request.body = { amount: 4990, currency: 'USD' }.to_json
+
+response = http.request(request)`,
+                go: `payload := map[string]interface{}{"amount": 4990, "currency": "USD"}
+body, _ := json.Marshal(payload)
+
+req, _ := http.NewRequest("POST", "${API_BASE}/create-session", bytes.NewBuffer(body))
+req.Header.Set("Authorization", "Bearer sk_test_your_api_key")
+req.Header.Set("Idempotency-Key", "order_12345_payment")
+req.Header.Set("Content-Type", "application/json")
+
+client := &http.Client{}
+resp, _ := client.Do(req)`,
+                php: `$ch = curl_init('${API_BASE}/create-session');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => json_encode(['amount' => 4990, 'currency' => 'USD']),
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer sk_test_your_api_key',
+        'Idempotency-Key: order_12345_payment',
+        'Content-Type: application/json'
+    ]
+]);
+$response = curl_exec($ch);`
+              }}
             />
             <p className="text-xs text-slate-500">
               Idempotency keys expire after 24 hours. We recommend using order IDs or UUIDs.
@@ -1995,16 +2100,59 @@ curl_close($ch);`
                 { name: 'amount_2', type: 'integer', required: true, description: 'Second micro-deposit amount in cents (1-99)' },
               ]}
             />
-            <CodeBlock
-              title="Request"
-              language="bash"
-              code={`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify \\
+            <MultiLanguageCodeBlock
+              title="Verify Bank Account"
+              examples={{
+                curl: `curl -X POST ${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify \\
   -H "Authorization: Bearer sk_test_..." \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "amount_1": 32,
-    "amount_2": 45
-  }'`}
+  -d '{"amount_1": 32, "amount_2": 45}'`,
+                javascript: `const response = await fetch('${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ amount_1: 32, amount_2: 45 })
+});`,
+                python: `import requests
+
+response = requests.post(
+    '${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify',
+    headers={'Authorization': 'Bearer sk_test_...'},
+    json={'amount_1': 32, 'amount_2': 45}
+)`,
+                ruby: `uri = URI('${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(uri)
+request['Authorization'] = 'Bearer sk_test_...'
+request['Content-Type'] = 'application/json'
+request.body = { amount_1: 32, amount_2: 45 }.to_json
+
+response = http.request(request)`,
+                go: `payload := map[string]int{"amount_1": 32, "amount_2": 45}
+body, _ := json.Marshal(payload)
+
+req, _ := http.NewRequest("POST", "${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify", bytes.NewBuffer(body))
+req.Header.Set("Authorization", "Bearer sk_test_...")
+req.Header.Set("Content-Type", "application/json")
+
+client := &http.Client{}
+resp, _ := client.Do(req)`,
+                php: `$ch = curl_init('${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => json_encode(['amount_1' => 32, 'amount_2' => 45]),
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer sk_test_...',
+        'Content-Type: application/json'
+    ]
+]);
+$response = curl_exec($ch);`
+              }}
             />
             <CodeBlock
               title="Response"
@@ -2048,20 +2196,88 @@ curl_close($ch);`
                 { name: 'subscription_id', type: 'string', description: 'Link mandate to a subscription' },
               ]}
             />
-            <CodeBlock
-              title="Request"
-              language="bash"
-              code={`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates \\
+            <MultiLanguageCodeBlock
+              title="Create Mandate"
+              examples={{
+                curl: `curl -X POST ${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates \\
   -H "Authorization: Bearer sk_test_..." \\
   -H "Content-Type: application/json" \\
   -d '{
     "authorization_type": "debit",
     "frequency": "recurring",
-    "authorization_text": "I authorize Atlas to debit my bank account for payments...",
+    "authorization_text": "I authorize Atlas to debit my bank account...",
+    "ip_address": "192.168.1.1",
+    "amount_limit": 100000
+  }'`,
+                javascript: `const response = await fetch('${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    authorization_type: 'debit',
+    frequency: 'recurring',
+    authorization_text: 'I authorize Atlas to debit my bank account...',
+    ip_address: '192.168.1.1',
+    amount_limit: 100000
+  })
+});`,
+                python: `import requests
+
+response = requests.post(
+    '${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates',
+    headers={'Authorization': 'Bearer sk_test_...'},
+    json={
+        'authorization_type': 'debit',
+        'frequency': 'recurring',
+        'authorization_text': 'I authorize Atlas to debit my bank account...',
+        'ip_address': '192.168.1.1',
+        'amount_limit': 100000
+    }
+)`,
+                ruby: `uri = URI('${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates')
+request = Net::HTTP::Post.new(uri)
+request['Authorization'] = 'Bearer sk_test_...'
+request['Content-Type'] = 'application/json'
+request.body = {
+  authorization_type: 'debit',
+  frequency: 'recurring',
+  authorization_text: 'I authorize Atlas to debit my bank account...',
+  ip_address: '192.168.1.1',
+  amount_limit: 100000
+}.to_json
+
+response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(request) }`,
+                go: `payload := map[string]interface{}{
+    "authorization_type": "debit",
+    "frequency": "recurring",
+    "authorization_text": "I authorize Atlas to debit my bank account...",
     "ip_address": "192.168.1.1",
     "amount_limit": 100000,
-    "monthly_limit": 500000
-  }'`}
+}
+body, _ := json.Marshal(payload)
+
+req, _ := http.NewRequest("POST", "${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates", bytes.NewBuffer(body))
+req.Header.Set("Authorization", "Bearer sk_test_...")
+req.Header.Set("Content-Type", "application/json")
+
+resp, _ := (&http.Client{}).Do(req)`,
+                php: `$ch = curl_init('${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => json_encode([
+        'authorization_type' => 'debit',
+        'frequency' => 'recurring',
+        'authorization_text' => 'I authorize Atlas to debit my bank account...',
+        'ip_address' => '192.168.1.1',
+        'amount_limit' => 100000
+    ]),
+    CURLOPT_HTTPHEADER => ['Authorization: Bearer sk_test_...', 'Content-Type: application/json']
+]);
+$response = curl_exec($ch);`
+              }}
             />
             <CodeBlock
               title="Response"
@@ -2103,10 +2319,10 @@ curl_close($ch);`
                 { name: 'metadata', type: 'object', description: 'Custom key-value pairs' },
               ]}
             />
-            <CodeBlock
-              title="Request - Debit (Pull Funds)"
-              language="bash"
-              code={`curl -X POST \${API_BASE}/bank-transfers \\
+            <MultiLanguageCodeBlock
+              title="Create Bank Transfer"
+              examples={{
+                curl: `curl -X POST ${API_BASE}/bank-transfers \\
   -H "Authorization: Bearer sk_test_..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -2114,9 +2330,77 @@ curl_close($ch);`
     "mandate_id": "mandate_abc123",
     "direction": "debit",
     "amount": 50000,
+    "statement_descriptor": "ACME INV"
+  }'`,
+                javascript: `const response = await fetch('${API_BASE}/bank-transfers', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_test_...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    bank_account_id: 'ba_1a2b3c4d5e6f',
+    mandate_id: 'mandate_abc123',
+    direction: 'debit',
+    amount: 50000,
+    statement_descriptor: 'ACME INV'
+  })
+});`,
+                python: `import requests
+
+response = requests.post(
+    '${API_BASE}/bank-transfers',
+    headers={'Authorization': 'Bearer sk_test_...'},
+    json={
+        'bank_account_id': 'ba_1a2b3c4d5e6f',
+        'mandate_id': 'mandate_abc123',
+        'direction': 'debit',
+        'amount': 50000,
+        'statement_descriptor': 'ACME INV'
+    }
+)`,
+                ruby: `uri = URI('${API_BASE}/bank-transfers')
+request = Net::HTTP::Post.new(uri)
+request['Authorization'] = 'Bearer sk_test_...'
+request['Content-Type'] = 'application/json'
+request.body = {
+  bank_account_id: 'ba_1a2b3c4d5e6f',
+  mandate_id: 'mandate_abc123',
+  direction: 'debit',
+  amount: 50000,
+  statement_descriptor: 'ACME INV'
+}.to_json
+
+response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(request) }`,
+                go: `payload := map[string]interface{}{
+    "bank_account_id": "ba_1a2b3c4d5e6f",
+    "mandate_id": "mandate_abc123",
+    "direction": "debit",
+    "amount": 50000,
     "statement_descriptor": "ACME INV",
-    "invoice_id": "inv_xyz789"
-  }'`}
+}
+body, _ := json.Marshal(payload)
+
+req, _ := http.NewRequest("POST", "${API_BASE}/bank-transfers", bytes.NewBuffer(body))
+req.Header.Set("Authorization", "Bearer sk_test_...")
+req.Header.Set("Content-Type", "application/json")
+
+resp, _ := (&http.Client{}).Do(req)`,
+                php: `$ch = curl_init('${API_BASE}/bank-transfers');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => json_encode([
+        'bank_account_id' => 'ba_1a2b3c4d5e6f',
+        'mandate_id' => 'mandate_abc123',
+        'direction' => 'debit',
+        'amount' => 50000,
+        'statement_descriptor' => 'ACME INV'
+    ]),
+    CURLOPT_HTTPHEADER => ['Authorization: Bearer sk_test_...', 'Content-Type: application/json']
+]);
+$response = curl_exec($ch);`
+              }}
             />
             <CodeBlock
               title="Response"
@@ -2222,14 +2506,30 @@ curl_close($ch);`
                 { name: 'description', type: 'string', description: 'Optional product description' },
                 { name: 'metadata', type: 'object', description: 'Key-value pairs for your use' },
               ]} />
-              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/products \\
+              <MultiLanguageCodeBlock
+                title="Create Product"
+                examples={{
+                  curl: `curl -X POST ${API_BASE}/products \\
   -H "Authorization: Bearer sk_test_xxx" \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Pro Plan",
-    "description": "Full access to all features",
-    "metadata": { "tier": "pro" }
-  }'`} />
+  -d '{"name": "Pro Plan", "description": "Full access", "metadata": {"tier": "pro"}}'`,
+                  javascript: `const response = await fetch('${API_BASE}/products', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer sk_test_xxx', 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Pro Plan', description: 'Full access', metadata: { tier: 'pro' } })
+});`,
+                  python: `response = requests.post('${API_BASE}/products',
+    headers={'Authorization': 'Bearer sk_test_xxx'},
+    json={'name': 'Pro Plan', 'description': 'Full access', 'metadata': {'tier': 'pro'}})`,
+                  go: `payload := map[string]interface{}{"name": "Pro Plan", "description": "Full access", "metadata": map[string]string{"tier": "pro"}}
+body, _ := json.Marshal(payload)
+req, _ := http.NewRequest("POST", "${API_BASE}/products", bytes.NewBuffer(body))
+req.Header.Set("Authorization", "Bearer sk_test_xxx")`,
+                  php: `$response = curl_exec(curl_init_with_opts('${API_BASE}/products', [
+    'name' => 'Pro Plan', 'description' => 'Full access', 'metadata' => ['tier' => 'pro']
+], 'Bearer sk_test_xxx'));`
+                }}
+              />
             </EndpointCard>
 
             <EndpointCard method="GET" path="/products" description="List all products">
@@ -2267,19 +2567,37 @@ curl_close($ch);`
                   { name: 'usage_type', type: 'string', description: 'licensed or metered' },
                 ] },
               ]} />
-              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/prices \\
+              <MultiLanguageCodeBlock
+                title="Create Price"
+                examples={{
+                  curl: `curl -X POST ${API_BASE}/prices \\
   -H "Authorization: Bearer sk_test_xxx" \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "product": "prod_xxx",
-    "currency": "usd",
-    "unit_amount": 2999,
-    "type": "recurring",
-    "recurring": {
-      "interval": "month",
-      "interval_count": 1
-    }
-  }'`} />
+  -d '{"product": "prod_xxx", "currency": "usd", "unit_amount": 2999, "type": "recurring", "recurring": {"interval": "month"}}'`,
+                  javascript: `const response = await fetch('${API_BASE}/prices', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer sk_test_xxx', 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    product: 'prod_xxx', currency: 'usd', unit_amount: 2999,
+    type: 'recurring', recurring: { interval: 'month' }
+  })
+});`,
+                  python: `response = requests.post('${API_BASE}/prices',
+    headers={'Authorization': 'Bearer sk_test_xxx'},
+    json={'product': 'prod_xxx', 'currency': 'usd', 'unit_amount': 2999,
+          'type': 'recurring', 'recurring': {'interval': 'month'}})`,
+                  go: `payload := map[string]interface{}{
+    "product": "prod_xxx", "currency": "usd", "unit_amount": 2999,
+    "type": "recurring", "recurring": map[string]string{"interval": "month"},
+}
+body, _ := json.Marshal(payload)
+req, _ := http.NewRequest("POST", "${API_BASE}/prices", bytes.NewBuffer(body))`,
+                  php: `$response = curl_exec(curl_init_with_opts('${API_BASE}/prices', [
+    'product' => 'prod_xxx', 'currency' => 'usd', 'unit_amount' => 2999,
+    'type' => 'recurring', 'recurring' => ['interval' => 'month']
+], 'Bearer sk_test_xxx'));`
+                }}
+              />
             </EndpointCard>
           </div>
 
@@ -2294,14 +2612,37 @@ curl_close($ch);`
                 { name: 'cancel_at_period_end', type: 'boolean', description: 'Cancel at end of current period' },
                 { name: 'metadata', type: 'object', description: 'Key-value pairs for your use' },
               ]} />
-              <CodeBlock title="Request" language="bash" code={`curl -X POST ${API_BASE}/subscriptions \\
+              <MultiLanguageCodeBlock
+                title="Create Subscription"
+                examples={{
+                  curl: `curl -X POST ${API_BASE}/subscriptions \\
   -H "Authorization: Bearer sk_test_xxx" \\
   -H "Content-Type: application/json" \\
-  -d '{
+  -d '{"customer": "cus_xxx", "items": [{"price": "price_xxx", "quantity": 1}], "trial_period_days": 14}'`,
+                  javascript: `const response = await fetch('${API_BASE}/subscriptions', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer sk_test_xxx', 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    customer: 'cus_xxx',
+    items: [{ price: 'price_xxx', quantity: 1 }],
+    trial_period_days: 14
+  })
+});`,
+                  python: `response = requests.post('${API_BASE}/subscriptions',
+    headers={'Authorization': 'Bearer sk_test_xxx'},
+    json={'customer': 'cus_xxx', 'items': [{'price': 'price_xxx', 'quantity': 1}], 'trial_period_days': 14})`,
+                  go: `payload := map[string]interface{}{
     "customer": "cus_xxx",
-    "items": [{ "price": "price_xxx", "quantity": 1 }],
-    "trial_period_days": 14
-  }'`} />
+    "items": []map[string]interface{}{{"price": "price_xxx", "quantity": 1}},
+    "trial_period_days": 14,
+}
+body, _ := json.Marshal(payload)
+req, _ := http.NewRequest("POST", "${API_BASE}/subscriptions", bytes.NewBuffer(body))`,
+                  php: `$response = curl_exec(curl_init_with_opts('${API_BASE}/subscriptions', [
+    'customer' => 'cus_xxx', 'items' => [['price' => 'price_xxx', 'quantity' => 1]], 'trial_period_days' => 14
+], 'Bearer sk_test_xxx'));`
+                }}
+              />
             </EndpointCard>
 
             <EndpointCard method="POST" path="/subscriptions/:id/pause" description="Pause a subscription">
