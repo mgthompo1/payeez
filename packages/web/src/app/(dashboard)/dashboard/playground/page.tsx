@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, ShieldCheck, Terminal, CreditCard, Lock, ArrowRight, Play, CheckCircle2 } from 'lucide-react'
+import { Loader2, ShieldCheck, Terminal, CreditCard, Lock, ArrowRight, Play, CheckCircle2, RefreshCw } from 'lucide-react'
 
 export default function PlaygroundPage() {
   const [loading, setLoading] = useState(false)
