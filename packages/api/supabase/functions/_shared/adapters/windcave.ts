@@ -20,6 +20,26 @@ export interface CardData {
   cvc: string;
 }
 
+export interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  recipient_name?: string;
+}
+
+export interface CustomerData {
+  email?: string;
+  name?: string;
+  phone?: string;
+}
+
+export interface BrowserData {
+  ipAddress?: string;
+  userAgent?: string;
+}
+
 export interface AuthorizeRequest {
   amount: number;
   currency: string;
@@ -28,6 +48,13 @@ export interface AuthorizeRequest {
   capture: boolean;  // true = purchase, false = auth
   merchantReference?: string;
   metadata?: Record<string, string>;
+  // Enhanced fields
+  customer?: CustomerData;
+  billingAddress?: Address;
+  shippingAddress?: Address;
+  browser?: BrowserData;
+  statementDescriptor?: string;
+  description?: string;
 }
 
 export interface AuthorizeResponse {
@@ -43,6 +70,13 @@ export interface AuthorizeResponse {
   };
   failureCode?: string;
   failureMessage?: string;
+  // AVS/CVV results
+  avsResult?: string;
+  cvvResult?: string;
+  // 3DS results
+  threeDsVersion?: string;
+  threeDsStatus?: 'challenged' | 'frictionless' | 'failed' | 'not_enrolled' | 'unavailable';
+  threeDsEci?: string;
   rawResponse: unknown;
 }
 
@@ -136,7 +170,8 @@ export const windcaveAdapter = {
 
     const transactionType = req.capture ? 'purchase' : 'auth';
 
-    const requestBody = {
+    // Build base request
+    const requestBody: Record<string, any> = {
       type: transactionType,
       amount: amountStr,
       currency: req.currency.toUpperCase(),
@@ -149,6 +184,47 @@ export const windcaveAdapter = {
         cvc2: req.cardData.cvc,
       },
     };
+
+    // Add customer contact info if provided
+    if (req.customer?.email || req.customer?.phone) {
+      requestBody.notificationUrl = requestBody.notificationUrl || {};
+      if (req.customer.email) {
+        requestBody.customerEmail = req.customer.email;
+      }
+      if (req.customer.phone) {
+        requestBody.customerPhone = req.customer.phone;
+      }
+    }
+
+    // Add billing address for AVS (Address Verification Service)
+    if (req.billingAddress) {
+      requestBody.avs = {
+        avsAction: 1, // 1 = check but proceed regardless
+        avsPostCode: req.billingAddress.postal_code,
+        avsCity: req.billingAddress.city,
+        avsState: req.billingAddress.state,
+        avsCountry: req.billingAddress.country,
+        avsStreetAddress: req.billingAddress.street,
+      };
+    }
+
+    // Add browser info for 3DS/risk assessment
+    if (req.browser?.ipAddress) {
+      requestBody.clientInfo = {
+        ...(requestBody.clientInfo || {}),
+        ipAddress: req.browser.ipAddress,
+      };
+    }
+
+    // Add statement descriptor (soft descriptor)
+    if (req.statementDescriptor) {
+      requestBody.statementDescriptor = req.statementDescriptor;
+    }
+
+    // Store metadata as JSON in merchant data field
+    if (req.metadata && Object.keys(req.metadata).length > 0) {
+      requestBody.txnData1 = JSON.stringify(req.metadata).slice(0, 255);
+    }
 
     console.log('[Windcave] Request body:', JSON.stringify({
       ...requestBody,
@@ -211,6 +287,20 @@ export const windcaveAdapter = {
 
       const isSuccess = result.authorised === true;
 
+      // Extract AVS result if available
+      const avsResult = result.avs?.avsResult || result.avsResult;
+      const cvvResult = result.cvc2Result || result.cvvResult;
+
+      // Extract 3DS result if available
+      let threeDsStatus: 'challenged' | 'frictionless' | 'failed' | 'not_enrolled' | 'unavailable' | undefined;
+      if (result.threeDSecure) {
+        if (result.threeDSecure.status === 'Y') threeDsStatus = 'frictionless';
+        else if (result.threeDSecure.status === 'C') threeDsStatus = 'challenged';
+        else if (result.threeDSecure.status === 'N') threeDsStatus = 'failed';
+        else if (result.threeDSecure.status === 'U') threeDsStatus = 'unavailable';
+        else if (result.threeDSecure.enrolled === false) threeDsStatus = 'not_enrolled';
+      }
+
       return {
         success: isSuccess,
         transactionId: result.id,
@@ -224,6 +314,13 @@ export const windcaveAdapter = {
         } : undefined,
         failureCode: isSuccess ? undefined : result.reCo,
         failureMessage: isSuccess ? undefined : result.responseText,
+        // AVS/CVV results
+        avsResult,
+        cvvResult,
+        // 3DS results
+        threeDsVersion: result.threeDSecure?.version,
+        threeDsStatus,
+        threeDsEci: result.threeDSecure?.eci,
         rawResponse: result,
       };
     } catch (error: any) {

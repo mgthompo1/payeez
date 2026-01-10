@@ -403,6 +403,7 @@ serve(async (req) => {
 
         const result = await adapter.authorize(
           {
+            // Core payment data
             amount: session.amount,
             currency: session.currency,
             tokenId: vaultTokenId,
@@ -410,14 +411,44 @@ serve(async (req) => {
             paymentMethodType,
             idempotencyKey,
             capture: session.capture_method === 'automatic',
-            customerEmail: session.customer_email,
+
+            // Merchant reference (use session's merchant_reference if set, fallback to sessionId)
+            merchantReference: session.merchant_reference || sessionId,
+
+            // Customer data
+            customer: {
+              email: session.customer_email,
+              name: session.customer_name,
+              phone: session.customer_phone,
+            },
+
+            // Addresses for AVS/fraud
+            billingAddress: session.billing_address,
+            shippingAddress: session.shipping_address,
+
+            // Browser info for 3DS
+            browser: {
+              ipAddress: session.browser_ip,
+              userAgent: session.browser_user_agent,
+            },
+
+            // Display
+            statementDescriptor: session.statement_descriptor,
+            description: session.description,
+
+            // Metadata
             metadata: session.metadata,
-            merchantReference: sessionId,
+
+            // Bank account for ACH
             bankAccount: paymentMethodType === 'bank_account' ? body.bank_account : undefined,
+
             // VGS-specific data for proxy requests
             tokenProvider,
             vgsConfig: vgsConfig || undefined,
             vgsData: body.vgs_data,
+
+            // Legacy compatibility
+            customerEmail: session.customer_email,
           },
           credentialsWithEnv as { secret_key: string },
           vaultApiKey!
@@ -426,7 +457,7 @@ serve(async (req) => {
         const latencyMs = Date.now() - startTime;
         lastResult = result;
 
-        // Update attempt record
+        // Update attempt record with results including AVS/3DS
         await supabase
           .from('payment_attempts')
           .update({
@@ -438,6 +469,15 @@ serve(async (req) => {
             failure_message: result.failureMessage,
             failure_category: result.failureCategory,
             raw_response: result.rawResponse,
+            // Browser IP from session
+            browser_ip: session.browser_ip,
+            // AVS/CVV results
+            avs_result: result.avsResult,
+            cvv_result: result.cvvResult,
+            // 3DS results
+            three_ds_version: result.threeDsVersion,
+            three_ds_status: result.threeDsStatus,
+            three_ds_eci: result.threeDsEci,
           })
           .eq('id', attempt?.id);
 

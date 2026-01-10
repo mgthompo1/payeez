@@ -8,18 +8,54 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  recipient_name?: string;
+}
+
 interface CreateSessionRequest {
+  // Core required fields
   amount: number;
   currency: string;
+
+  // Merchant reference (order ID, invoice number)
+  merchant_reference?: string;
   external_id?: string;
+
+  // Payment configuration
   payment_method_types?: string[];
+  capture_method?: 'automatic' | 'manual';
+
+  // Customer data
   customer?: {
     email?: string;
     name?: string;
+    phone?: string;
   };
-  capture_method?: 'automatic' | 'manual';
+
+  // Addresses for AVS/fraud
+  billing_address?: Address;
+  shipping_address?: Address;
+
+  // Browser info for 3DS
+  browser?: {
+    ip_address?: string;
+    user_agent?: string;
+  };
+
+  // Display/descriptor
+  statement_descriptor?: string;
+  description?: string;
+
+  // URLs
   success_url?: string;
   cancel_url?: string;
+
+  // Custom data
   metadata?: Record<string, string>;
 }
 
@@ -98,7 +134,7 @@ serve(async (req) => {
     // Generate client secret
     const clientSecret = generateSecureToken('cs_', 48);
 
-    // Create payment session
+    // Create payment session with enhanced fields
     const { data: session, error } = await supabase
       .from('payment_sessions')
       .insert({
@@ -110,11 +146,26 @@ serve(async (req) => {
         status: 'requires_payment_method',
         capture_method: body.capture_method || 'automatic',
         payment_method_types: body.payment_method_types,
+        // Merchant reference
+        merchant_reference: body.merchant_reference,
+        // Customer data
         customer_email: body.customer?.email,
         customer_name: body.customer?.name,
-        metadata: body.metadata || {},
+        customer_phone: body.customer?.phone,
+        // Addresses
+        billing_address: body.billing_address || null,
+        shipping_address: body.shipping_address || null,
+        // Browser info for 3DS
+        browser_ip: body.browser?.ip_address,
+        browser_user_agent: body.browser?.user_agent,
+        // Display
+        statement_descriptor: body.statement_descriptor,
+        description: body.description,
+        // URLs
         success_url: body.success_url,
         cancel_url: body.cancel_url,
+        // Custom data
+        metadata: body.metadata || {},
       })
       .select()
       .single();
