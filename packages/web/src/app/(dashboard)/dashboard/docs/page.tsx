@@ -114,7 +114,7 @@ function EndpointCard({
   children,
   defaultExpanded = false,
 }: {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   path: string
   description: string
   children: React.ReactNode
@@ -126,6 +126,7 @@ function EndpointCard({
     POST: 'bg-green-500/10 text-green-400 border-green-500/20',
     PUT: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
     DELETE: 'bg-red-500/10 text-red-400 border-red-500/20',
+    PATCH: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   }
 
   return (
