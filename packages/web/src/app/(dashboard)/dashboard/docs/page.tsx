@@ -26,7 +26,8 @@ import {
   Repeat,
   Users,
   Receipt,
-  Package
+  Package,
+  Landmark
 } from 'lucide-react'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.atlas.co/functions/v1'
@@ -177,6 +178,7 @@ export default function DocsPage() {
     { id: 'authentication', label: 'Authentication', icon: Key },
     { id: 'sessions', label: 'Sessions', icon: Code2 },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'bank-accounts', label: 'Bank Accounts / ACH', icon: Landmark },
     { id: 'billing', label: 'Billing', icon: Repeat },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'invoices', label: 'Invoices', icon: Receipt },
@@ -1661,6 +1663,324 @@ atlas listen --forward-to localhost:3000/webhooks/atlas
                     <span className="text-xs text-slate-500">{i + 1}</span>
                   </div>
                   <span className="text-sm text-slate-400">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bank Accounts / ACH */}
+      {activeTab === 'bank-accounts' && (
+        <div className="space-y-6">
+          <SectionHeader
+            icon={Landmark}
+            title="Bank Accounts & ACH Payments"
+            description="Accept and send bank payments via ACH, manage mandates, and handle verification"
+          />
+
+          <div className="rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">A2A Payment Infrastructure</h2>
+            <p className="text-slate-400 text-sm">Connect bank accounts, collect ACH authorization mandates, initiate debit/credit transfers, and handle verification via micro-deposits. Supports US ACH (NACHA), Stripe ACH, and international rails.</p>
+          </div>
+
+          {/* Supported Countries */}
+          <div className="dashboard-card border border-white/10 p-6">
+            <h3 className="text-white font-semibold mb-4">Supported Countries & Rails</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { country: 'US', rail: 'ACH (NACHA)', settlement: '3 days', pullDebits: true },
+                { country: 'GB', rail: 'Faster Payments', settlement: 'Instant', pullDebits: false },
+                { country: 'EU', rail: 'SEPA', settlement: '1 day', pullDebits: true },
+                { country: 'AU', rail: 'BECS', settlement: '2 days', pullDebits: true },
+                { country: 'NZ', rail: 'Direct Entry', settlement: '2 days', pullDebits: true },
+                { country: 'CA', rail: 'EFT', settlement: '2 days', pullDebits: true },
+              ].map((item) => (
+                <div key={item.country} className="bg-white/5 rounded-lg p-4 border border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white font-bold">{item.country}</span>
+                    <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px]">{item.rail}</Badge>
+                  </div>
+                  <div className="text-xs text-slate-500">Settlement: {item.settlement}</div>
+                  <div className="text-xs text-slate-500">Pull Debits: {item.pullDebits ? 'Yes' : 'No (Push only)'}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Create Bank Account */}
+          <EndpointCard
+            method="POST"
+            path="/bank-accounts"
+            description="Connect a bank account"
+            defaultExpanded
+          >
+            <p className="text-slate-400 text-sm mb-4">
+              Securely vault a bank account. Account and routing numbers are encrypted and stored in the Atlas Vault.
+            </p>
+            <ParamTable
+              params={[
+                { name: 'holder_name', type: 'string', required: true, description: 'Name on the bank account' },
+                { name: 'account_number', type: 'string', required: true, description: 'Bank account number (encrypted in vault)' },
+                { name: 'routing_number', type: 'string', required: true, description: 'ABA routing number (US) or equivalent' },
+                { name: 'account_type', type: 'string', description: '"checking" or "savings". Defaults to "checking"' },
+                { name: 'customer_id', type: 'string', description: 'Optional customer to link this account to' },
+                { name: 'country', type: 'string', description: 'ISO country code. Defaults to "US"' },
+                { name: 'currency', type: 'string', description: 'ISO currency code. Defaults to "USD"' },
+                { name: 'verification_method', type: 'string', description: '"microdeposit", "instant", "manual", or "open_banking"' },
+                { name: 'metadata', type: 'object', description: 'Custom key-value pairs' },
+              ]}
+            />
+            <CodeBlock
+              title="Request"
+              language="bash"
+              code={\`curl -X POST \${API_BASE}/bank-accounts \\
+  -H "Authorization: Bearer sk_test_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "holder_name": "Acme Corp",
+    "account_number": "000123456789",
+    "routing_number": "110000000",
+    "account_type": "checking",
+    "verification_method": "microdeposit",
+    "metadata": {
+      "department": "payroll"
+    }
+  }'\`}
+            />
+            <CodeBlock
+              title="Response"
+              language="json"
+              code={\`{
+  "id": "ba_1a2b3c4d5e6f",
+  "holder_name": "Acme Corp",
+  "account_type": "checking",
+  "last4": "6789",
+  "routing_last4": "0000",
+  "bank_name": "Chase",
+  "country": "US",
+  "currency": "USD",
+  "verification_status": "pending",
+  "verification_method": "microdeposit",
+  "is_active": true,
+  "is_default": false,
+  "created_at": "2024-01-15T10:30:00Z"
+}\`}
+            />
+          </EndpointCard>
+
+          {/* Verify with Micro-deposits */}
+          <EndpointCard
+            method="POST"
+            path="/bank-accounts/:id/verify"
+            description="Verify via micro-deposits"
+          >
+            <p className="text-slate-400 text-sm mb-4">
+              After initiating micro-deposit verification, two small amounts (1-99 cents) are deposited. The account holder must confirm these amounts to verify ownership.
+            </p>
+            <ParamTable
+              params={[
+                { name: 'amount_1', type: 'integer', required: true, description: 'First micro-deposit amount in cents (1-99)' },
+                { name: 'amount_2', type: 'integer', required: true, description: 'Second micro-deposit amount in cents (1-99)' },
+              ]}
+            />
+            <CodeBlock
+              title="Request"
+              language="bash"
+              code={\`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/verify \\
+  -H "Authorization: Bearer sk_test_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "amount_1": 32,
+    "amount_2": 45
+  }'\`}
+            />
+            <CodeBlock
+              title="Response"
+              language="json"
+              code={\`{
+  "id": "ba_1a2b3c4d5e6f",
+  "verification_status": "verified",
+  "verified_at": "2024-01-17T14:22:00Z"
+}\`}
+            />
+            <div className="mt-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-400 font-medium text-sm">Verification Limits</p>
+                  <p className="text-slate-400 text-xs mt-1">Accounts have 3 verification attempts. After 3 failed attempts, the account is locked and a new account must be added. Micro-deposits expire after 10 days.</p>
+                </div>
+              </div>
+            </div>
+          </EndpointCard>
+
+          {/* Create Mandate */}
+          <EndpointCard
+            method="POST"
+            path="/bank-accounts/:id/mandates"
+            description="Create ACH authorization mandate"
+          >
+            <p className="text-slate-400 text-sm mb-4">
+              A mandate is a legal authorization to debit or credit a bank account. Required for recurring ACH debits. Store the authorization text and acceptance details for compliance.
+            </p>
+            <ParamTable
+              params={[
+                { name: 'authorization_type', type: 'string', description: '"debit", "credit", or "both". Defaults to "debit"' },
+                { name: 'frequency', type: 'string', description: '"once" or "recurring". Defaults to "recurring"' },
+                { name: 'authorization_text', type: 'string', required: true, description: 'The legal text the customer agreed to' },
+                { name: 'ip_address', type: 'string', required: true, description: 'IP address when authorization was given' },
+                { name: 'user_agent', type: 'string', description: 'Browser user agent string' },
+                { name: 'amount_limit', type: 'integer', description: 'Maximum amount per transaction in cents' },
+                { name: 'daily_limit', type: 'integer', description: 'Maximum daily total in cents' },
+                { name: 'monthly_limit', type: 'integer', description: 'Maximum monthly total in cents' },
+                { name: 'subscription_id', type: 'string', description: 'Link mandate to a subscription' },
+              ]}
+            />
+            <CodeBlock
+              title="Request"
+              language="bash"
+              code={\`curl -X POST \${API_BASE}/bank-accounts/ba_1a2b3c4d5e6f/mandates \\
+  -H "Authorization: Bearer sk_test_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "authorization_type": "debit",
+    "frequency": "recurring",
+    "authorization_text": "I authorize Atlas to debit my bank account for payments...",
+    "ip_address": "192.168.1.1",
+    "amount_limit": 100000,
+    "monthly_limit": 500000
+  }'\`}
+            />
+            <CodeBlock
+              title="Response"
+              language="json"
+              code={\`{
+  "id": "mandate_abc123",
+  "bank_account_id": "ba_1a2b3c4d5e6f",
+  "authorization_type": "debit",
+  "frequency": "recurring",
+  "amount_limit": 100000,
+  "monthly_limit": 500000,
+  "status": "active",
+  "accepted_at": "2024-01-17T14:30:00Z",
+  "created_at": "2024-01-17T14:30:00Z"
+}\`}
+            />
+          </EndpointCard>
+
+          {/* Create Transfer */}
+          <EndpointCard
+            method="POST"
+            path="/bank-transfers"
+            description="Initiate ACH debit or credit"
+          >
+            <p className="text-slate-400 text-sm mb-4">
+              Create a bank transfer to debit (pull funds) or credit (push funds) a verified bank account. Requires an active mandate for debits.
+            </p>
+            <ParamTable
+              params={[
+                { name: 'bank_account_id', type: 'string', required: true, description: 'The verified bank account to transfer from/to' },
+                { name: 'mandate_id', type: 'string', description: 'Required for debit transfers' },
+                { name: 'direction', type: 'string', required: true, description: '"debit" (pull) or "credit" (push)' },
+                { name: 'amount', type: 'integer', required: true, description: 'Amount in cents' },
+                { name: 'currency', type: 'string', description: 'Defaults to account currency' },
+                { name: 'settlement_provider', type: 'string', description: '"nacha", "stripe_ach", "dwolla", "moov"' },
+                { name: 'statement_descriptor', type: 'string', description: 'Text shown on bank statement (max 10 chars)' },
+                { name: 'invoice_id', type: 'string', description: 'Link to an invoice' },
+                { name: 'subscription_id', type: 'string', description: 'Link to a subscription' },
+                { name: 'metadata', type: 'object', description: 'Custom key-value pairs' },
+              ]}
+            />
+            <CodeBlock
+              title="Request - Debit (Pull Funds)"
+              language="bash"
+              code={\`curl -X POST \${API_BASE}/bank-transfers \\
+  -H "Authorization: Bearer sk_test_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "bank_account_id": "ba_1a2b3c4d5e6f",
+    "mandate_id": "mandate_abc123",
+    "direction": "debit",
+    "amount": 50000,
+    "statement_descriptor": "ACME INV",
+    "invoice_id": "inv_xyz789"
+  }'\`}
+            />
+            <CodeBlock
+              title="Response"
+              language="json"
+              code={\`{
+  "id": "bt_transfer123",
+  "bank_account_id": "ba_1a2b3c4d5e6f",
+  "mandate_id": "mandate_abc123",
+  "direction": "debit",
+  "amount": 50000,
+  "currency": "USD",
+  "status": "pending",
+  "settlement_provider": "stripe_ach",
+  "expected_settlement_at": "2024-01-20T00:00:00Z",
+  "initiated_at": "2024-01-17T15:00:00Z",
+  "created_at": "2024-01-17T15:00:00Z"
+}\`}
+            />
+          </EndpointCard>
+
+          {/* ACH Return Codes */}
+          <div className="dashboard-card border border-white/10 p-6">
+            <h3 className="text-white font-semibold mb-4">ACH Return Codes</h3>
+            <p className="text-slate-400 text-sm mb-4">When an ACH transfer fails, you'll receive a return code. Handle these appropriately:</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left px-4 py-2 text-slate-500">Code</th>
+                    <th className="text-left px-4 py-2 text-slate-500">Description</th>
+                    <th className="text-left px-4 py-2 text-slate-500">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {[
+                    { code: 'R01', desc: 'Insufficient Funds', action: 'Retry after a few days' },
+                    { code: 'R02', desc: 'Account Closed', action: 'Disable account, request new account' },
+                    { code: 'R03', desc: 'No Account Found', action: 'Disable account, verify details' },
+                    { code: 'R04', desc: 'Invalid Account Number', action: 'Disable account, request correction' },
+                    { code: 'R07', desc: 'Authorization Revoked', action: 'Revoke mandate, contact customer' },
+                    { code: 'R09', desc: 'Uncollected Funds', action: 'Retry after a few days' },
+                    { code: 'R10', desc: 'Customer Advises Not Authorized', action: 'Review mandate, possible dispute' },
+                    { code: 'R20', desc: 'Non-Transaction Account', action: 'Request different account type' },
+                  ].map((item) => (
+                    <tr key={item.code}>
+                      <td className="px-4 py-3"><code className="text-red-400">{item.code}</code></td>
+                      <td className="px-4 py-3 text-slate-300">{item.desc}</td>
+                      <td className="px-4 py-3 text-slate-500">{item.action}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Webhooks */}
+          <div className="dashboard-card border border-white/10 p-6">
+            <h3 className="text-white font-semibold mb-4">Bank Account Webhooks</h3>
+            <p className="text-slate-400 text-sm mb-4">Subscribe to these events for bank account activity:</p>
+            <div className="space-y-3">
+              {[
+                { event: 'bank_account.created', desc: 'Bank account was added' },
+                { event: 'bank_account.verified', desc: 'Micro-deposit verification succeeded' },
+                { event: 'bank_account.verification_failed', desc: 'Verification failed (attempts exhausted)' },
+                { event: 'mandate.created', desc: 'New authorization mandate created' },
+                { event: 'mandate.revoked', desc: 'Mandate was revoked' },
+                { event: 'bank_transfer.initiated', desc: 'Transfer was submitted' },
+                { event: 'bank_transfer.processing', desc: 'Transfer is being processed' },
+                { event: 'bank_transfer.settled', desc: 'Transfer completed successfully' },
+                { event: 'bank_transfer.failed', desc: 'Transfer failed' },
+                { event: 'bank_transfer.returned', desc: 'Transfer was returned (see return_code)' },
+              ].map((item) => (
+                <div key={item.event} className="flex items-center gap-4 p-3 rounded-lg bg-white/5">
+                  <code className="text-cyan-400 text-sm font-mono">{item.event}</code>
+                  <span className="text-slate-400 text-sm">{item.desc}</span>
                 </div>
               ))}
             </div>
