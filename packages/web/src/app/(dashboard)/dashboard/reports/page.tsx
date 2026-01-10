@@ -46,8 +46,33 @@ const toEndOfDayIso = (value: string) => {
   return date.toISOString()
 }
 
-// ===== EXPORT TAB =====
+// ===== TYPES =====
 type ReportType = 'transactions' | 'refunds' | 'settlements'
+
+interface Settlement {
+  id: string
+  psp: string
+  currency: string
+  gross_amount: number
+  fee_amount: number
+  net_amount: number
+  period_start: string
+  period_end: string
+  deposited_at: string
+  status: string
+  created_at: string
+}
+
+interface SettlementItem {
+  id: string
+  payment_attempt_id: string
+  amount: number
+  fee_amount: number
+  net_amount: number
+  created_at: string
+}
+
+// ===== EXPORT TAB =====
 
 function escapeCsv(value: unknown) {
   if (value === null || value === undefined) return ''
