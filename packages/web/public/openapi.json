@@ -1,0 +1,1344 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Atlas Payments API",
+    "description": "A modern payment orchestration platform with multi-PSP support, intelligent routing, and comprehensive billing capabilities.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Atlas Support",
+      "url": "https://atlas.co/support"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.atlas.co/functions/v1",
+      "description": "Production API"
+    },
+    {
+      "url": "http://localhost:54321/functions/v1",
+      "description": "Local Development"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {"name": "Sessions", "description": "Payment session management"},
+    {"name": "Payments", "description": "Payment capture, refund, and management"},
+    {"name": "Bank Accounts", "description": "ACH and bank account operations"},
+    {"name": "Customers", "description": "Customer management"},
+    {"name": "Products", "description": "Product catalog"},
+    {"name": "Prices", "description": "Pricing configuration"},
+    {"name": "Subscriptions", "description": "Recurring billing"},
+    {"name": "Invoices", "description": "Invoice management"},
+    {"name": "Webhooks", "description": "Webhook configuration"},
+    {"name": "3D Secure", "description": "Strong customer authentication"}
+  ],
+  "paths": {
+    "/create-session": {
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Create a payment session",
+        "description": "Creates a new payment session for collecting payment information",
+        "operationId": "createSession",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/get-session/{id}": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Retrieve a payment session",
+        "operationId": "getSession",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Session ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/confirm-payment/{id}": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Confirm a payment",
+        "description": "Confirms and processes a payment. Typically called by the SDK.",
+        "operationId": "confirmPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Session ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capture-payment/{id}": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Capture an authorized payment",
+        "description": "Captures a previously authorized payment. Supports partial captures.",
+        "operationId": "capturePayment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Payment ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "description": "Partial capture amount in cents"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment captured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/refund-payment/{id}": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Refund a payment",
+        "description": "Refunds a captured payment. Supports partial refunds.",
+        "operationId": "refundPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Payment ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "description": "Partial refund amount in cents"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Reason for refund"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refund created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Refund"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bank-accounts": {
+      "post": {
+        "tags": ["Bank Accounts"],
+        "summary": "Create a bank account",
+        "description": "Securely vault a bank account for ACH payments",
+        "operationId": "createBankAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBankAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bank account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccount"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Bank Accounts"],
+        "summary": "List bank accounts",
+        "operationId": "listBankAccounts",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "query",
+            "schema": {"type": "string"},
+            "description": "Filter by customer"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 10},
+            "description": "Maximum results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bank accounts list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bank-transfers": {
+      "post": {
+        "tags": ["Bank Accounts"],
+        "summary": "Initiate a bank transfer",
+        "description": "Create an ACH debit or credit transfer",
+        "operationId": "createBankTransfer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBankTransferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transfer initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankTransfer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers": {
+      "post": {
+        "tags": ["Customers"],
+        "summary": "Create a customer",
+        "operationId": "createCustomer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Customer created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Customers"],
+        "summary": "List customers",
+        "operationId": "listCustomers",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "schema": {"type": "string"},
+            "description": "Filter by email"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 10}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "tags": ["Customers"],
+        "summary": "Retrieve a customer",
+        "operationId": "getCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Customers"],
+        "summary": "Update a customer",
+        "operationId": "updateCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Customer updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Customers"],
+        "summary": "Delete a customer",
+        "operationId": "deleteCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer deleted"
+          }
+        }
+      }
+    },
+    "/products": {
+      "post": {
+        "tags": ["Products"],
+        "summary": "Create a product",
+        "operationId": "createProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Products"],
+        "summary": "List products",
+        "operationId": "listProducts",
+        "responses": {
+          "200": {
+            "description": "Product list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prices": {
+      "post": {
+        "tags": ["Prices"],
+        "summary": "Create a price",
+        "operationId": "createPrice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Price created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Price"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Prices"],
+        "summary": "List prices",
+        "operationId": "listPrices",
+        "parameters": [
+          {
+            "name": "product",
+            "in": "query",
+            "schema": {"type": "string"},
+            "description": "Filter by product ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Price list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subscriptions": {
+      "post": {
+        "tags": ["Subscriptions"],
+        "summary": "Create a subscription",
+        "operationId": "createSubscription",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubscriptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Subscription created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Subscriptions"],
+        "summary": "List subscriptions",
+        "operationId": "listSubscriptions",
+        "parameters": [
+          {
+            "name": "customer",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["active", "trialing", "past_due", "paused", "canceled"]}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subscriptions/{id}/pause": {
+      "post": {
+        "tags": ["Subscriptions"],
+        "summary": "Pause a subscription",
+        "operationId": "pauseSubscription",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subscriptions/{id}/resume": {
+      "post": {
+        "tags": ["Subscriptions"],
+        "summary": "Resume a subscription",
+        "operationId": "resumeSubscription",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription resumed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices": {
+      "post": {
+        "tags": ["Invoices"],
+        "summary": "Create an invoice",
+        "operationId": "createInvoice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvoiceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invoice"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Invoices"],
+        "summary": "List invoices",
+        "operationId": "listInvoices",
+        "parameters": [
+          {
+            "name": "customer",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["draft", "open", "paid", "void", "uncollectible"]}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices/{id}/finalize": {
+      "post": {
+        "tags": ["Invoices"],
+        "summary": "Finalize an invoice",
+        "operationId": "finalizeInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice finalized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invoice"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices/{id}/pay": {
+      "post": {
+        "tags": ["Invoices"],
+        "summary": "Pay an invoice",
+        "operationId": "payInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice paid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invoice"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "post": {
+        "tags": ["Webhooks"],
+        "summary": "Create a webhook endpoint",
+        "operationId": "createWebhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Webhook"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List webhook endpoints",
+        "operationId": "listWebhooks",
+        "responses": {
+          "200": {
+            "description": "Webhook list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/threeds-authenticate": {
+      "post": {
+        "tags": ["3D Secure"],
+        "summary": "Initiate 3DS authentication",
+        "operationId": "initiate3DS",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThreeDSRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "3DS initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreeDSResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check",
+        "operationId": "healthCheck",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "ok"},
+                    "timestamp": {"type": "string", "format": "date-time"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key authentication. Use your test key (sk_test_...) for development or live key (sk_live_...) for production."
+      }
+    },
+    "schemas": {
+      "CreateSessionRequest": {
+        "type": "object",
+        "required": ["amount", "currency"],
+        "properties": {
+          "amount": {"type": "integer", "description": "Amount in cents (e.g., 4990 = $49.90)"},
+          "currency": {"type": "string", "description": "Three-letter ISO currency code", "example": "USD"},
+          "external_id": {"type": "string", "description": "Your unique order/transaction ID"},
+          "capture_method": {"type": "string", "enum": ["automatic", "manual"], "default": "automatic"},
+          "customer": {
+            "type": "object",
+            "properties": {
+              "email": {"type": "string"},
+              "name": {"type": "string"},
+              "phone": {"type": "string"}
+            }
+          },
+          "metadata": {"type": "object", "additionalProperties": true}
+        }
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "sess_2xK9mN7vQ3pL8wYz"},
+          "object": {"type": "string", "example": "session"},
+          "amount": {"type": "integer"},
+          "currency": {"type": "string"},
+          "status": {"type": "string", "enum": ["pending", "requires_payment_method", "processing", "succeeded", "canceled"]},
+          "client_secret": {"type": "string"},
+          "external_id": {"type": "string"},
+          "capture_method": {"type": "string"},
+          "metadata": {"type": "object"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "expires_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "ConfirmPaymentRequest": {
+        "type": "object",
+        "required": ["payment_method_type"],
+        "properties": {
+          "payment_method_type": {"type": "string", "enum": ["card", "apple_pay", "google_pay", "bank_account"]},
+          "token_id": {"type": "string"},
+          "token_provider": {"type": "string", "enum": ["atlas", "vgs"]},
+          "psp": {"type": "string", "description": "Force specific PSP"},
+          "apple_pay_token": {"type": "string"},
+          "google_pay_token": {"type": "string"}
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "pay_8xM2nQ4vR7kL9pYz"},
+          "session_id": {"type": "string"},
+          "amount": {"type": "integer"},
+          "currency": {"type": "string"},
+          "status": {"type": "string", "enum": ["authorized", "captured", "failed", "canceled", "refunded"]},
+          "payment_method_type": {"type": "string"},
+          "psp": {"type": "string"},
+          "psp_transaction_id": {"type": "string"},
+          "card": {
+            "type": "object",
+            "properties": {
+              "brand": {"type": "string"},
+              "last4": {"type": "string"},
+              "exp_month": {"type": "integer"},
+              "exp_year": {"type": "integer"}
+            }
+          },
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Refund": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "re_8xM2nQ4vR7kL9pYz"},
+          "payment_id": {"type": "string"},
+          "amount": {"type": "integer"},
+          "currency": {"type": "string"},
+          "status": {"type": "string", "enum": ["pending", "succeeded", "failed"]},
+          "reason": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CreateBankAccountRequest": {
+        "type": "object",
+        "required": ["holder_name", "account_number", "routing_number"],
+        "properties": {
+          "holder_name": {"type": "string"},
+          "account_number": {"type": "string"},
+          "routing_number": {"type": "string"},
+          "account_type": {"type": "string", "enum": ["checking", "savings"], "default": "checking"},
+          "customer_id": {"type": "string"},
+          "country": {"type": "string", "default": "US"},
+          "currency": {"type": "string", "default": "USD"},
+          "verification_method": {"type": "string", "enum": ["microdeposit", "instant", "manual", "open_banking"]},
+          "metadata": {"type": "object"}
+        }
+      },
+      "BankAccount": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "ba_1a2b3c4d5e6f"},
+          "holder_name": {"type": "string"},
+          "account_type": {"type": "string"},
+          "last4": {"type": "string"},
+          "routing_last4": {"type": "string"},
+          "bank_name": {"type": "string"},
+          "country": {"type": "string"},
+          "currency": {"type": "string"},
+          "verification_status": {"type": "string", "enum": ["pending", "verified", "failed"]},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "BankAccountList": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string", "example": "list"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/BankAccount"}},
+          "has_more": {"type": "boolean"},
+          "total_count": {"type": "integer"}
+        }
+      },
+      "CreateBankTransferRequest": {
+        "type": "object",
+        "required": ["bank_account_id", "amount", "direction"],
+        "properties": {
+          "bank_account_id": {"type": "string"},
+          "amount": {"type": "integer"},
+          "direction": {"type": "string", "enum": ["debit", "credit"]},
+          "description": {"type": "string"},
+          "metadata": {"type": "object"}
+        }
+      },
+      "BankTransfer": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "bank_account_id": {"type": "string"},
+          "amount": {"type": "integer"},
+          "direction": {"type": "string"},
+          "status": {"type": "string", "enum": ["pending", "processing", "succeeded", "failed", "returned"]},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CreateCustomerRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": {"type": "string", "format": "email"},
+          "name": {"type": "string"},
+          "phone": {"type": "string"},
+          "metadata": {"type": "object"},
+          "address": {
+            "type": "object",
+            "properties": {
+              "line1": {"type": "string"},
+              "line2": {"type": "string"},
+              "city": {"type": "string"},
+              "state": {"type": "string"},
+              "postal_code": {"type": "string"},
+              "country": {"type": "string"}
+            }
+          }
+        }
+      },
+      "UpdateCustomerRequest": {
+        "type": "object",
+        "properties": {
+          "email": {"type": "string", "format": "email"},
+          "name": {"type": "string"},
+          "phone": {"type": "string"},
+          "metadata": {"type": "object"}
+        }
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "cus_xxx"},
+          "object": {"type": "string", "example": "customer"},
+          "email": {"type": "string"},
+          "name": {"type": "string"},
+          "phone": {"type": "string"},
+          "metadata": {"type": "object"},
+          "created": {"type": "integer"}
+        }
+      },
+      "CustomerList": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string", "example": "list"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Customer"}},
+          "has_more": {"type": "boolean"},
+          "total_count": {"type": "integer"}
+        }
+      },
+      "CreateProductRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "metadata": {"type": "object"}
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "prod_xxx"},
+          "object": {"type": "string", "example": "product"},
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "active": {"type": "boolean"},
+          "metadata": {"type": "object"},
+          "created": {"type": "integer"}
+        }
+      },
+      "ProductList": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string", "example": "list"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Product"}},
+          "has_more": {"type": "boolean"},
+          "total_count": {"type": "integer"}
+        }
+      },
+      "CreatePriceRequest": {
+        "type": "object",
+        "required": ["product", "currency"],
+        "properties": {
+          "product": {"type": "string"},
+          "currency": {"type": "string"},
+          "unit_amount": {"type": "integer"},
+          "type": {"type": "string", "enum": ["one_time", "recurring"], "default": "one_time"},
+          "recurring": {
+            "type": "object",
+            "properties": {
+              "interval": {"type": "string", "enum": ["day", "week", "month", "year"]},
+              "interval_count": {"type": "integer", "default": 1},
+              "usage_type": {"type": "string", "enum": ["licensed", "metered"]}
+            }
+          }
+        }
+      },
+      "Price": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "price_xxx"},
+          "object": {"type": "string", "example": "price"},
+          "product": {"type": "string"},
+          "currency": {"type": "string"},
+          "unit_amount": {"type": "integer"},
+          "type": {"type": "string"},
+          "recurring": {"type": "object"},
+          "active": {"type": "boolean"},
+          "created": {"type": "integer"}
+        }
+      },
+      "PriceList": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string", "example": "list"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Price"}},
+          "has_more": {"type": "boolean"}
+        }
+      },
+      "CreateSubscriptionRequest": {
+        "type": "object",
+        "required": ["customer", "items"],
+        "properties": {
+          "customer": {"type": "string"},
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "price": {"type": "string"},
+                "quantity": {"type": "integer", "default": 1}
+              }
+            }
+          },
+          "trial_period_days": {"type": "integer"},
+          "cancel_at_period_end": {"type": "boolean"},
+          "metadata": {"type": "object"}
+        }
+      },
+      "Subscription": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "sub_xxx"},
+          "object": {"type": "string", "example": "subscription"},
+          "customer": {"type": "string"},
+          "status": {"type": "string", "enum": ["trialing", "active", "past_due", "paused", "canceled", "unpaid"]},
+          "items": {"type": "array"},
+          "current_period_start": {"type": "integer"},
+          "current_period_end": {"type": "integer"},
+          "cancel_at_period_end": {"type": "boolean"},
+          "created": {"type": "integer"}
+        }
+      },
+      "SubscriptionList": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string", "example": "list"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Subscription"}},
+          "has_more": {"type": "boolean"}
+        }
+      },
+      "CreateInvoiceRequest": {
+        "type": "object",
+        "required": ["customer"],
+        "properties": {
+          "customer": {"type": "string"},
+          "auto_advance": {"type": "boolean", "default": true},
+          "collection_method": {"type": "string", "enum": ["charge_automatically", "send_invoice"]},
+          "days_until_due": {"type": "integer"},
+          "description": {"type": "string"}
+        }
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "inv_xxx"},
+          "object": {"type": "string", "example": "invoice"},
+          "customer": {"type": "string"},
+          "status": {"type": "string", "enum": ["draft", "open", "paid", "void", "uncollectible"]},
+          "amount_due": {"type": "integer"},
+          "amount_paid": {"type": "integer"},
+          "currency": {"type": "string"},
+          "due_date": {"type": "integer"},
+          "created": {"type": "integer"}
+        }
+      },
+      "InvoiceList": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string", "example": "list"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Invoice"}},
+          "has_more": {"type": "boolean"}
+        }
+      },
+      "CreateWebhookRequest": {
+        "type": "object",
+        "required": ["url", "events"],
+        "properties": {
+          "url": {"type": "string", "format": "uri"},
+          "events": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "description": {"type": "string"}
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "url": {"type": "string"},
+          "events": {"type": "array", "items": {"type": "string"}},
+          "secret": {"type": "string"},
+          "status": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "WebhookList": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string", "example": "list"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Webhook"}}
+        }
+      },
+      "ThreeDSRequest": {
+        "type": "object",
+        "required": ["session_id", "token_id", "amount", "currency"],
+        "properties": {
+          "session_id": {"type": "string"},
+          "token_id": {"type": "string"},
+          "amount": {"type": "integer"},
+          "currency": {"type": "string"},
+          "challenge_preference": {"type": "string", "enum": ["no_preference", "no_challenge", "challenge_requested", "challenge_mandated"]}
+        }
+      },
+      "ThreeDSResponse": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"type": "string", "enum": ["Y", "A", "N", "U", "C"]},
+          "challenge_required": {"type": "boolean"},
+          "challenge_url": {"type": "string"},
+          "authentication_value": {"type": "string"},
+          "eci": {"type": "string"},
+          "ds_transaction_id": {"type": "string"},
+          "liability_shift": {"type": "boolean"}
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "type": {"type": "string"},
+              "code": {"type": "string"},
+              "message": {"type": "string"},
+              "param": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized - invalid or missing API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

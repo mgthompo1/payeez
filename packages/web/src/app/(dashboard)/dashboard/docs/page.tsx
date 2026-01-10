@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { CodeBlock, MultiLanguageCodeBlock } from '@/components/docs'
+import { CodeBlock, MultiLanguageCodeBlock, ApiExplorer, DocSearch } from '@/components/docs'
 import {
   Terminal,
   Code2,
@@ -199,6 +199,9 @@ export default function DocsPage() {
           </div>
 
           <div className="hidden lg:block rounded-2xl border border-white/10 dashboard-card p-4 sticky top-6">
+            <div className="mb-4">
+              <DocSearch onNavigate={(tabId) => setActiveTab(tabId)} />
+            </div>
             <div className="text-xs uppercase tracking-[0.3em] text-slate-500 mb-3">Documentation</div>
             <div className="space-y-2">
               {tabs.map((tab) => (
@@ -378,6 +381,37 @@ app.post('/webhooks/atlas', express.raw({ type: 'application/json' }), (req, res
   res.json({ received: true });
 });`}
               />
+            </div>
+
+            {/* OpenAPI Spec */}
+            <div className="rounded-xl dashboard-card border border-white/10 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <FileCode className="h-4 w-4 text-blue-400" />
+                </div>
+                <h3 className="font-semibold text-white">OpenAPI Specification</h3>
+              </div>
+              <p className="text-sm text-slate-400 mb-4">
+                Download our OpenAPI 3.0 specification to generate client libraries, import into Postman, or use with any OpenAPI-compatible tool.
+              </p>
+              <div className="flex gap-3">
+                <a
+                  href="/openapi.json"
+                  download="atlas-openapi.json"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm font-medium"
+                >
+                  <FileCode className="h-4 w-4" />
+                  Download OpenAPI Spec
+                </a>
+                <a
+                  href="/openapi.json"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-colors text-sm font-medium"
+                >
+                  View JSON
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -783,6 +817,23 @@ curl_close($ch);`
 }`}
                 />
               </div>
+
+              <ApiExplorer
+                method="POST"
+                endpoint="/create-session"
+                description="Try creating a payment session with your API key"
+                defaultBody={{
+                  amount: 4990,
+                  currency: "USD",
+                  external_id: "order_12345",
+                  capture_method: "automatic",
+                  customer: {
+                    email: "customer@example.com",
+                    name: "John Doe"
+                  },
+                  metadata: { plan: "premium" }
+                }}
+              />
             </div>
           </EndpointCard>
 
@@ -2530,6 +2581,16 @@ req.Header.Set("Authorization", "Bearer sk_test_xxx")`,
 ], 'Bearer sk_test_xxx'));`
                 }}
               />
+              <ApiExplorer
+                method="POST"
+                endpoint="/products"
+                description="Try creating a billing product"
+                defaultBody={{
+                  name: "Test Product",
+                  description: "A test product from API Explorer",
+                  metadata: { source: "api_explorer" }
+                }}
+              />
             </EndpointCard>
 
             <EndpointCard method="GET" path="/products" description="List all products">
@@ -2762,11 +2823,26 @@ req, _ := http.NewRequest("POST", "${API_BASE}/subscriptions", bytes.NewBuffer(b
   "metadata": { "user_id": "123" },
   "created": 1704844800
 }`} />
+            <ApiExplorer
+              method="POST"
+              endpoint="/customers"
+              description="Try creating a customer record"
+              defaultBody={{
+                email: "test@example.com",
+                name: "Test Customer",
+                metadata: { source: "api_explorer" }
+              }}
+            />
           </EndpointCard>
 
           <EndpointCard method="GET" path="/customers" description="List all customers">
             <CodeBlock title="Request" language="bash" code={`curl ${API_BASE}/customers?limit=10 \\
   -H "Authorization: Bearer sk_test_xxx"`} />
+            <ApiExplorer
+              method="GET"
+              endpoint="/customers"
+              description="List your customers"
+            />
           </EndpointCard>
 
           <EndpointCard method="GET" path="/customers/:id" description="Retrieve a customer">

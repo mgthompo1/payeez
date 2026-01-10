@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Activity, DollarSign, Zap, Database } from 'lucide-react'
+import { Activity, DollarSign, Zap, Database, TrendingUp, PieChart } from 'lucide-react'
 
 type TimeRange = '24h' | '7d' | '30d' | 'ytd'
 
@@ -22,7 +22,7 @@ interface DashboardContentProps {
 export function DashboardContent({ allTransactions }: DashboardContentProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
 
-  const { filteredTx, chartPoints, maxY, xLabels, totalVolume, successRate, txCount } = useMemo(() => {
+  const { filteredTx, chartPoints, maxY, xLabels, totalVolume, successRate, txCount, pspBreakdown, statusBreakdown } = useMemo(() => {
     const now = new Date()
     let startDate: Date
     let buckets: number[]
@@ -107,6 +107,51 @@ export function DashboardContent({ allTransactions }: DashboardContentProps) {
       ? ((successCount / filtered.length) * 100).toFixed(1) + '%'
       : '0%'
 
+    // Calculate PSP breakdown
+    const pspCounts: Record<string, { count: number; volume: number }> = {}
+    filtered.forEach(tx => {
+      const psp = tx.psp || 'unknown'
+      if (!pspCounts[psp]) {
+        pspCounts[psp] = { count: 0, volume: 0 }
+      }
+      pspCounts[psp].count++
+      pspCounts[psp].volume += tx.amount
+    })
+
+    const pspData = Object.entries(pspCounts)
+      .map(([name, data]) => ({
+        name,
+        count: data.count,
+        volume: data.volume,
+        percentage: filtered.length > 0 ? (data.count / filtered.length * 100).toFixed(1) : '0'
+      }))
+      .sort((a, b) => b.count - a.count)
+
+    // Calculate status breakdown
+    const statusCounts: Record<string, number> = {}
+    filtered.forEach(tx => {
+      const status = tx.status || 'unknown'
+      statusCounts[status] = (statusCounts[status] || 0) + 1
+    })
+
+    const statusColors: Record<string, string> = {
+      succeeded: '#10b981',
+      captured: '#10b981',
+      failed: '#ef4444',
+      pending: '#f59e0b',
+      processing: '#3b82f6',
+      canceled: '#6b7280',
+    }
+
+    const statusData = Object.entries(statusCounts)
+      .map(([status, count]) => ({
+        status,
+        count,
+        percentage: filtered.length > 0 ? (count / filtered.length * 100).toFixed(1) : '0',
+        color: statusColors[status] || '#64748b'
+      }))
+      .sort((a, b) => b.count - a.count)
+
     return {
       filteredTx: filtered,
       chartPoints: points,
@@ -114,7 +159,9 @@ export function DashboardContent({ allTransactions }: DashboardContentProps) {
       xLabels: labels,
       totalVolume: volume,
       successRate: rate,
-      txCount: filtered.length
+      txCount: filtered.length,
+      pspBreakdown: pspData,
+      statusBreakdown: statusData
     }
   }, [allTransactions, timeRange])
 
@@ -230,6 +277,109 @@ export function DashboardContent({ allTransactions }: DashboardContentProps) {
                 <span key={i} className="text-[10px] font-mono text-slate-500">{label}</span>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 relative z-10">
+        {/* PSP Distribution */}
+        <div className="dashboard-card overflow-hidden">
+          <div className="px-4 py-3 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+            <span className="text-xs font-mono text-slate-300">PSP_DISTRIBUTION</span>
+            <TrendingUp className="h-4 w-4 text-slate-500" />
+          </div>
+          <div className="p-4">
+            {pspBreakdown.length > 0 ? (
+              <div className="space-y-3">
+                {pspBreakdown.slice(0, 5).map((psp, i) => {
+                  const colors = ['bg-cyan-500', 'bg-blue-500', 'bg-violet-500', 'bg-amber-500', 'bg-emerald-500']
+                  return (
+                    <div key={psp.name} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-300 capitalize">{psp.name}</span>
+                        <span className="text-slate-500 font-mono text-xs">
+                          {psp.count} ({psp.percentage}%)
+                        </span>
+                      </div>
+                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${colors[i % colors.length]} rounded-full transition-all duration-500`}
+                          style={{ width: `${psp.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-slate-500 text-sm">
+                No PSP data available
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Status Breakdown */}
+        <div className="dashboard-card overflow-hidden">
+          <div className="px-4 py-3 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+            <span className="text-xs font-mono text-slate-300">STATUS_BREAKDOWN</span>
+            <PieChart className="h-4 w-4 text-slate-500" />
+          </div>
+          <div className="p-4">
+            {statusBreakdown.length > 0 ? (
+              <div className="flex items-center gap-6">
+                {/* Mini pie chart visualization */}
+                <div className="relative w-24 h-24 flex-shrink-0">
+                  <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                    {(() => {
+                      let offset = 0
+                      return statusBreakdown.map((status, i) => {
+                        const percentage = parseFloat(status.percentage)
+                        const dashArray = `${percentage} ${100 - percentage}`
+                        const currentOffset = offset
+                        offset += percentage
+                        return (
+                          <circle
+                            key={status.status}
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            fill="none"
+                            stroke={status.color}
+                            strokeWidth="20"
+                            strokeDasharray={dashArray}
+                            strokeDashoffset={-currentOffset}
+                            className="transition-all duration-500"
+                          />
+                        )
+                      })
+                    })()}
+                  </svg>
+                </div>
+                {/* Legend */}
+                <div className="flex-1 space-y-2">
+                  {statusBreakdown.map((status) => (
+                    <div key={status.status} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-sm"
+                          style={{ backgroundColor: status.color }}
+                        />
+                        <span className="text-sm text-slate-300 capitalize">{status.status}</span>
+                      </div>
+                      <span className="text-xs font-mono text-slate-500">
+                        {status.count} ({status.percentage}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-slate-500 text-sm">
+                No status data available
+              </div>
+            )}
           </div>
         </div>
       </div>
