@@ -41,18 +41,18 @@ import { createPspCredential } from './actions'
 
 type PSPName = 'stripe' | 'adyen' | 'authorizenet' | 'chase' | 'nuvei' | 'dlocal' | 'braintree' | 'checkoutcom' | 'airwallex' | 'windcave'
 
-// Payment Processor Logo URLs (using official/CDN sources)
+// Payment Processor Logo paths (stored in /public/logos/)
 const PSP_LOGOS: Record<PSPName, string> = {
-  stripe: 'https://logo.clearbit.com/stripe.com',
-  adyen: 'https://logo.clearbit.com/adyen.com',
-  braintree: 'https://logo.clearbit.com/braintreepayments.com',
-  nuvei: 'https://logo.clearbit.com/nuvei.com',
-  dlocal: 'https://logo.clearbit.com/dlocal.com',
-  airwallex: 'https://logo.clearbit.com/airwallex.com',
-  authorizenet: 'https://logo.clearbit.com/authorize.net',
-  chase: 'https://logo.clearbit.com/chase.com',
-  checkoutcom: 'https://logo.clearbit.com/checkout.com',
-  windcave: 'https://logo.clearbit.com/windcave.com',
+  stripe: '/logos/stripe.svg',
+  adyen: '/logos/adyen.svg',
+  braintree: '/logos/braintree.svg',
+  nuvei: '/logos/nuvei.svg',
+  dlocal: '/logos/dlocal.svg',
+  airwallex: '/logos/airwallex.svg',
+  authorizenet: '/logos/authorizenet.svg',
+  chase: '/logos/chase.svg',
+  checkoutcom: '/logos/checkoutcom.svg',
+  windcave: '/logos/windcave.svg',
 }
 
 interface PSPConfig {
