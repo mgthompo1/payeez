@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -155,18 +154,30 @@ export default function OrchestrationPage() {
   }
 
   async function addTrafficRule() {
-    if (profile && newTrafficRule.psp) {
-      await supabase.from('traffic_split_rules').insert({
-        profile_id: profile.id,
-        tenant_id: profile.tenant_id,
-        psp: newTrafficRule.psp,
-        weight: newTrafficRule.weight,
-        is_active: true,
-      })
-      setShowTrafficDialog(false)
-      setNewTrafficRule({ psp: '', weight: 25 })
-      loadOrchestration()
+    if (!profile) {
+      console.error('No profile loaded')
+      return
     }
+    if (!newTrafficRule.psp) {
+      console.error('No processor selected')
+      return
+    }
+
+    const { error } = await supabase.from('traffic_split_rules').insert({
+      profile_id: profile.id,
+      psp: newTrafficRule.psp,
+      weight: newTrafficRule.weight,
+      is_active: true,
+    })
+
+    if (error) {
+      console.error('Failed to add traffic rule:', error)
+      return
+    }
+
+    setShowTrafficDialog(false)
+    setNewTrafficRule({ psp: '', weight: 25 })
+    loadOrchestration()
   }
 
   async function toggleTrafficRule(id: string, is_active: boolean) {
@@ -185,21 +196,33 @@ export default function OrchestrationPage() {
   }
 
   async function addRetryRule() {
-    if (profile && newRetryRule.source_psp && newRetryRule.target_psp) {
-      await supabase.from('retry_rules').insert({
-        profile_id: profile.id,
-        tenant_id: profile.tenant_id,
-        source_psp: newRetryRule.source_psp,
-        target_psp: newRetryRule.target_psp,
-        failure_codes: newRetryRule.failure_codes.length > 0 ? newRetryRule.failure_codes : null,
-        max_retries: newRetryRule.max_retries,
-        retry_order: 1,
-        is_active: true,
-      })
-      setShowRetryDialog(false)
-      setNewRetryRule({ source_psp: '', target_psp: '', failure_codes: [], max_retries: 1 })
-      loadOrchestration()
+    if (!profile) {
+      console.error('No profile loaded')
+      return
     }
+    if (!newRetryRule.source_psp || !newRetryRule.target_psp) {
+      console.error('Source and target processors are required')
+      return
+    }
+
+    const { error } = await supabase.from('retry_rules').insert({
+      profile_id: profile.id,
+      source_psp: newRetryRule.source_psp,
+      target_psp: newRetryRule.target_psp,
+      failure_codes: newRetryRule.failure_codes.length > 0 ? newRetryRule.failure_codes : null,
+      max_retries: newRetryRule.max_retries,
+      retry_order: 1,
+      is_active: true,
+    })
+
+    if (error) {
+      console.error('Failed to add retry rule:', error)
+      return
+    }
+
+    setShowRetryDialog(false)
+    setNewRetryRule({ source_psp: '', target_psp: '', failure_codes: [], max_retries: 1 })
+    loadOrchestration()
   }
 
   async function toggleRetryRule(id: string, is_active: boolean) {
