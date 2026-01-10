@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-01-10
+
+### Added
+
+#### Vault Provider Abstraction Layer
+
+**Provider-agnostic architecture for PCI scope flexibility:**
+
+Enables Atlas to switch between vault/tokenization providers without code changes. Designed for future PCI compliance migration path.
+
+- **Provider Interface** (`packages/api/src/lib/vault/`)
+  - `VaultProvider` - Token storage and retrieval
+  - `ProxyProvider` - PSP request forwarding with detokenization
+  - Unified interface regardless of underlying provider
+
+- **Supported Providers**
+  - `atlas` - Current Atlas CDE (encrypted storage in Supabase, AES-256-GCM)
+  - `basis_theory` - Basis Theory integration (stay out of PCI scope)
+  - `vgs` - Very Good Security (stub for future implementation)
+
+- **Configuration**
+  - Single env var switch: `VAULT_PROVIDER=atlas|basis_theory|vgs`
+  - Admin/platform-level config (not tenant-exposed)
+  - Automatic provider initialization via factory pattern
+
+- **PSP Helper** (`psp-helper.ts`)
+  - Provider-agnostic card placeholders (`CARD.NUMBER`, `CARD.CVC`, etc.)
+  - Pre-built payload formats for all supported PSPs
+  - `forwardToPSP()` convenience function
+
+- **Refactored Adapter Pattern**
+  - Example Windcave adapter using vault abstraction
+  - Same adapter code works with any provider
+  - Placeholder substitution handled by proxy layer
+
+### Architecture
+
+```
+VAULT_PROVIDER env var
+        │
+        ▼
+┌───────────────────┐
+│   getVault()      │──┬──▶ AtlasCDEVault (current, in PCI scope)
+│   getProxy()      │  ├──▶ BasisTheoryVault (future, out of PCI scope)
+└───────────────────┘  └──▶ VGSVault (future, out of PCI scope)
+```
+
+### PCI Compliance Path
+
+This abstraction enables a phased approach to PCI compliance:
+
+1. **Phase 1 (Current)**: `VAULT_PROVIDER=atlas` - Full control, in PCI scope
+2. **Phase 2 (Future)**: `VAULT_PROVIDER=basis_theory` - Exit PCI scope via BT proxy
+3. **Phase 3 (Optional)**: Build isolated CDE infrastructure if needed
+
+### Files Added
+
+```
+packages/api/src/lib/vault/
+├── index.ts              # Factory and exports
+├── types.ts              # Provider interfaces
+├── psp-helper.ts         # PSP request builders
+├── providers/
+│   ├── basis-theory.ts   # Basis Theory provider
+│   └── atlas-cde.ts      # Atlas native vault provider
+└── adapters/
+    └── windcave.ts       # Example refactored adapter
+```
+
+---
+
 ## [1.1.0] - 2026-01-09
 
 ### Added
