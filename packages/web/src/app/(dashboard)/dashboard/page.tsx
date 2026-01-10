@@ -55,17 +55,16 @@ export default async function DashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 relative z-10">
         {[
-          { label: 'Total Volume (24h)', value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalVolume / 100), icon: DollarSign, change: '+12.5%' },
-          { label: 'Success Rate', value: successRate, icon: Activity, change: '+0.01%' },
-          { label: 'Avg Latency', value: '45ms', icon: Zap, change: '-5ms' },
-          { label: 'Active Tokens', value: '1.2M', icon: Database, change: '+8.2%' },
+          { label: 'Total Volume (24h)', value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalVolume / 100), icon: DollarSign },
+          { label: 'Success Rate', value: successRate, icon: Activity },
+          { label: 'Transactions', value: totalCount.toString(), icon: Database },
+          { label: 'Avg Latency', value: '~45ms', icon: Zap },
         ].map((stat, i) => (
           <div key={i} className="dashboard-card p-5 hover:border-cyan-500/30 group">
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 rounded-lg bg-white/5 text-slate-400 group-hover:text-cyan-400 group-hover:bg-cyan-950/20 transition-colors">
                 <stat.icon className="w-4 h-4" />
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">{stat.change}</span>
             </div>
             <div className="space-y-1">
               <h3 className="text-2xl font-medium text-white tracking-tight">{stat.value}</h3>
@@ -75,26 +74,28 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Main Graph Area (SVG Area Chart) */}
-      <div className="dashboard-card w-full h-64 mb-8 relative overflow-hidden flex items-end z-10 group">
-        <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-          <defs>
-            <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <polygon points={areaPath} fill="url(#chartGradient)" />
-          <polyline points={pointsString} fill="none" stroke="#22d3ee" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
-        </svg>
-        
-        {/* Overlay Grid Lines */}
-        <div className="absolute inset-0 pointer-events-none border-t border-white/5"></div>
-        <div className="absolute inset-0 pointer-events-none border-b border-white/5"></div>
-        
-        {/* Graph Labels */}
-        <div className="absolute bottom-2 left-4 text-[10px] font-mono text-slate-500">00:00</div>
-        <div className="absolute bottom-2 right-4 text-[10px] font-mono text-slate-500">23:59</div>
+      {/* Transaction Volume Graph */}
+      <div className="dashboard-card w-full mb-8 relative overflow-hidden z-10 group">
+        <div className="px-4 py-3 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+          <span className="text-xs font-mono text-slate-300">TRANSACTION_VOLUME</span>
+          <span className="text-[10px] font-mono text-slate-500">Last 24 hours</span>
+        </div>
+        <div className="h-48 relative">
+          <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <polygon points={areaPath} fill="url(#chartGradient)" />
+            <polyline points={pointsString} fill="none" stroke="#22d3ee" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+          </svg>
+
+          {/* Graph Labels */}
+          <div className="absolute bottom-2 left-4 text-[10px] font-mono text-slate-500">00:00</div>
+          <div className="absolute bottom-2 right-4 text-[10px] font-mono text-slate-500">23:59</div>
+        </div>
       </div>
 
       {/* Recent Requests Table (Terminal Style) */}

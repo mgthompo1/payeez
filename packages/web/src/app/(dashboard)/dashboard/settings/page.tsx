@@ -1143,7 +1143,7 @@ function SettingsTabs() {
 // ===== MAIN PAGE =====
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6 max-w-screen-2xl mx-auto">
       <div>
         <h1 className="dashboard-heading text-2xl">Settings</h1>
         <p className="text-slate-500 mt-1">Manage your account, API keys, and integrations</p>
