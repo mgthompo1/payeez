@@ -16,8 +16,9 @@ import {
   UserCircle,
   Repeat,
   Receipt,
-  Key,
-  Search
+  Search,
+  Landmark,
+  FlaskConical
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -49,6 +50,7 @@ const navigationSections: NavSection[] = [
       { name: 'Customers', href: '/dashboard/customers', icon: UserCircle },
       { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: Repeat },
       { name: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
+      { name: 'Bank Accounts', href: '/dashboard/bank-accounts', icon: Landmark },
     ]
   },
   {
@@ -62,7 +64,7 @@ const navigationSections: NavSection[] = [
   {
     title: 'Developers',
     items: [
-      { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
+      { name: 'Playground', href: '/dashboard/playground', icon: FlaskConical },
       { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
       { name: 'Docs', href: '/dashboard/docs', icon: BookOpen },
     ]
