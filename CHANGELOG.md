@@ -2,6 +2,56 @@
 
 All notable changes to Atlas will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [1.1.0] - 2026-01-09
+
+### Added
+
+#### SDK Stripe-like API Improvements (`@atlas/sdk`)
+- **onChange events** - Real-time form state with `complete`, `empty`, `error`, and `brand` fields
+- **onFocus/onBlur callbacks** - Field-level focus tracking for parent integration
+- **Appearance API** - Full theming support:
+  - Theme presets: `default`, `night`, `minimal`
+  - CSS variables: `colorPrimary`, `colorBackground`, `colorText`, `colorDanger`, `colorSuccess`, `fontFamily`, `fontSizeBase`, `borderRadius`, `borderColor`, `spacingUnit`
+- **update() method** - Control form state: `{ disabled: boolean, loading: boolean }`
+- **clear() method** - Reset all form fields programmatically
+- **focus() method** - Focus specific fields: `cardNumber`, `expiry`, `cvc`, `cardHolder`
+- **Origin validation** - PostMessage security (enabled in production, relaxed in sandbox)
+- **setApiBase()** - Configure custom API endpoint for self-hosted deployments
+
+#### Elements Package (renamed from Tokenizer)
+- **Renamed** `@atlas/tokenizer` → `@atlas/elements`
+- **Theme support** - Parses appearance config and applies dynamic styling
+- **Disabled/Loading states** - Responds to SDK `update()` calls
+- **ATLAS_CHANGE messages** - Emits real-time validation state to parent
+- **ATLAS_CLEAR/FOCUS messages** - Form control from parent
+
+#### Windcave PSP Integration
+- Full REST API adapter for NZ/AU payments
+- Supports `purchase`, `authorize`, `capture`, `refund`, `void`
+- Handles 202 async polling for transaction completion
+- Added to dashboard PSP configuration UI
+
+#### Atlas Native Vault
+- In-house encrypted card storage (AES-256-GCM)
+- Token expiration and cleanup
+- No third-party vault dependencies
+
+### Changed
+- SDK config `tokenizerUrl` → `elementsUrl`
+- Default URLs: `tokenizer.atlas.io` → `elements.atlas.io`
+- Card form uses inline styles for theme flexibility
+
+### Security
+- PostMessage origin validation enabled by default
+- Origin checks relaxed only for localhost in sandbox mode
+
+---
+
 ## [Unreleased]
 
 ### Added

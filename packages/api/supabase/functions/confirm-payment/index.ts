@@ -12,6 +12,8 @@ import { dlocalAdapter } from '../_shared/adapters/dlocal.ts';
 import { braintreeAdapter } from '../_shared/adapters/braintree.ts';
 import { checkoutcomAdapter } from '../_shared/adapters/checkoutcom.ts';
 import { airwallexAdapter } from '../_shared/adapters/airwallex.ts';
+import { windcaveAdapter } from '../_shared/adapters/windcave.ts';
+import { getCardDataFromVault, markTokenUsed } from '../_shared/vault.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,7 +26,7 @@ type PaymentMethodType = 'card' | 'apple_pay' | 'google_pay' | 'bank_account';
 interface ConfirmRequest {
   payment_method_type: PaymentMethodType;
   token_id: string;
-  token_provider: 'basis_theory' | 'vgs';
+  token_provider: 'basis_theory' | 'vgs' | 'atlas';
   psp?: string;
   routing_profile_id?: string;
   apple_pay_token?: string;
@@ -41,7 +43,7 @@ interface ConfirmRequest {
   };
 }
 
-const adapters: Record<string, typeof stripeAdapter> = {
+const adapters: Record<string, any> = {
   stripe: stripeAdapter,
   adyen: adyenAdapter,
   authorizenet: authorizenetAdapter,
@@ -51,6 +53,7 @@ const adapters: Record<string, typeof stripeAdapter> = {
   braintree: braintreeAdapter,
   checkoutcom: checkoutcomAdapter,
   airwallex: airwallexAdapter,
+  windcave: windcaveAdapter,
 };
 
 // Maximum retry attempts
@@ -69,11 +72,21 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
-    const sessionId = pathParts[pathParts.length - 1];
+    let sessionId = pathParts[pathParts.length - 1];
+
+    // If session ID not in path, try to get from body (clone request since we'll read body later)
+    if (!sessionId || sessionId === 'confirm-payment') {
+      try {
+        const bodyClone = await req.clone().json();
+        sessionId = bodyClone.session_id;
+      } catch {
+        // Body parsing failed, continue with path-based check
+      }
+    }
 
     if (!sessionId || sessionId === 'confirm-payment') {
       return new Response(
-        JSON.stringify({ error: 'Session ID required' }),
+        JSON.stringify({ error: 'Session ID required. Provide in URL path or request body as session_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -207,20 +220,44 @@ serve(async (req) => {
       vaultTokenId = decryptedToken.id;
     }
 
-    // Store token reference
+    // Get or create token reference
     let token = null;
     if (paymentMethodType === 'card' || paymentMethodType === 'bank_account') {
-      const { data } = await supabase
-        .from('tokens')
-        .insert({
-          tenant_id: tenantId,
-          customer_email: session.customer_email,
-          vault_provider: tokenProvider,
-          vault_token_id: vaultTokenId,
-        })
-        .select()
-        .single();
-      token = data;
+      if (tokenProvider === 'atlas') {
+        // For Atlas vault, look up the existing token (created by tokenize-card)
+        const { data: existingToken } = await supabase
+          .from('tokens')
+          .select('*')
+          .eq('vault_token_id', vaultTokenId)
+          .eq('is_active', true)
+          .single();
+
+        if (existingToken) {
+          token = existingToken;
+          // Update the token with customer email if not set
+          if (!existingToken.customer_email && session.customer_email) {
+            await supabase
+              .from('tokens')
+              .update({ customer_email: session.customer_email })
+              .eq('id', existingToken.id);
+          }
+        } else {
+          console.error('[ConfirmPayment] Atlas token not found:', vaultTokenId);
+        }
+      } else {
+        // For other providers, create a new token reference
+        const { data } = await supabase
+          .from('tokens')
+          .insert({
+            tenant_id: tenantId,
+            customer_email: session.customer_email,
+            vault_provider: tokenProvider,
+            vault_token_id: vaultTokenId,
+          })
+          .select()
+          .single();
+        token = data;
+      }
     }
 
     // Build route context
@@ -345,23 +382,44 @@ serve(async (req) => {
       const startTime = Date.now();
 
       try {
+        // For Windcave with Atlas vault, we need to retrieve card data first
+        let cardData = null;
+        if (decision.psp === 'windcave' && tokenProvider === 'atlas') {
+          const decryptedCard = await getCardDataFromVault(vaultTokenId, sessionId);
+          if (!decryptedCard) {
+            throw new Error('Failed to retrieve card data from vault');
+          }
+          cardData = {
+            cardNumber: decryptedCard.pan,
+            cardHolderName: decryptedCard.cardHolderName || 'Card Holder',
+            expiryMonth: decryptedCard.expiryMonth,
+            expiryYear: decryptedCard.expiryYear,
+            cvc: decryptedCard.cvc,
+          };
+        }
+
+        // Environment is now included in credentials from the PSP config
+        const credentialsWithEnv = decision.credentials;
+
         const result = await adapter.authorize(
           {
             amount: session.amount,
             currency: session.currency,
             tokenId: vaultTokenId,
+            cardData, // For Windcave
             paymentMethodType,
             idempotencyKey,
             capture: session.capture_method === 'automatic',
             customerEmail: session.customer_email,
             metadata: session.metadata,
+            merchantReference: sessionId,
             bankAccount: paymentMethodType === 'bank_account' ? body.bank_account : undefined,
             // VGS-specific data for proxy requests
             tokenProvider,
             vgsConfig: vgsConfig || undefined,
             vgsData: body.vgs_data,
           },
-          decision.credentials as { secret_key: string },
+          credentialsWithEnv as { secret_key: string },
           vaultApiKey!
         );
 

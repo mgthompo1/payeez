@@ -27,14 +27,15 @@ import { Slider } from '@/components/ui/slider'
 import { Plus, Trash2, ArrowRight, RefreshCw, Percent, AlertTriangle, Activity, GitBranch, Zap, Check, X } from 'lucide-react'
 
 const PSP_OPTIONS = [
-  { value: 'stripe', label: 'Stripe', color: 'from-[#19d1c3] to-[#4cc3ff]' },
+  { value: 'stripe', label: 'Stripe', color: 'from-[#635bff] to-[#a259ff]' },
   { value: 'adyen', label: 'Adyen', color: 'from-green-500 to-emerald-500' },
+  { value: 'windcave', label: 'Windcave', color: 'from-[#19d1c3] to-[#4cc3ff]' },
   { value: 'authorizenet', label: 'Authorize.net', color: 'from-blue-500 to-cyan-500' },
   { value: 'chase', label: 'Chase', color: 'from-blue-600 to-blue-800' },
   { value: 'nuvei', label: 'Nuvei', color: 'from-orange-500 to-red-500' },
   { value: 'dlocal', label: 'dLocal', color: 'from-teal-500 to-green-500' },
   { value: 'braintree', label: 'Braintree', color: 'from-pink-500 to-rose-500' },
-  { value: 'checkoutcom', label: 'Checkout.com', color: 'from-indigo-500 to-[#4cc3ff]' },
+  { value: 'checkoutcom', label: 'Checkout.com', color: 'from-indigo-500 to-violet-500' },
   { value: 'airwallex', label: 'Airwallex', color: 'from-red-500 to-orange-500' },
 ]
 

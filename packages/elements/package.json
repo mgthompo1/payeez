@@ -1,6 +1,7 @@
 {
-  "name": "@atlas/tokenizer",
-  "version": "0.1.0",
+  "name": "@atlas/elements",
+  "version": "1.1.0",
+  "description": "Atlas Card Element - Secure PCI-compliant payment form",
   "private": true,
   "scripts": {
     "dev": "next dev",

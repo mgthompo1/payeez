@@ -15,9 +15,8 @@ import {
   Zap,
   Users,
   FileText,
-  Scale,
   Plug,
-  Terminal
+  Cpu
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -31,15 +30,14 @@ import {
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Playground', href: '/dashboard/playground', icon: Terminal },
   { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCard },
   { name: 'Reports', href: '/dashboard/reports', icon: FileText },
-  { name: 'Reconciliation', href: '/dashboard/reconciliation', icon: Scale },
   { name: 'Orchestration', href: '/dashboard/orchestration', icon: GitBranch },
+  { name: 'Processors', href: '/dashboard/processors', icon: Cpu },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
-  { name: 'Team', href: '/dashboard/team', icon: Users },
   { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
   { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
+  { name: 'Team', href: '/dashboard/team', icon: Users },
   { name: 'Docs', href: '/dashboard/docs', icon: BookOpen },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]

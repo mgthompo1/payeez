@@ -11,6 +11,7 @@ import { dlocalAdapter } from '../_shared/adapters/dlocal.ts';
 import { braintreeAdapter } from '../_shared/adapters/braintree.ts';
 import { checkoutcomAdapter } from '../_shared/adapters/checkoutcom.ts';
 import { airwallexAdapter } from '../_shared/adapters/airwallex.ts';
+import { windcaveAdapter } from '../_shared/adapters/windcave.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,7 +24,7 @@ interface RefundRequest {
   reason?: string;
 }
 
-const adapters: Record<string, typeof stripeAdapter> = {
+const adapters: Record<string, any> = {
   stripe: stripeAdapter,
   adyen: adyenAdapter,
   authorizenet: authorizenetAdapter,
@@ -33,6 +34,7 @@ const adapters: Record<string, typeof stripeAdapter> = {
   braintree: braintreeAdapter,
   checkoutcom: checkoutcomAdapter,
   airwallex: airwallexAdapter,
+  windcave: windcaveAdapter,
 };
 
 serve(async (req) => {

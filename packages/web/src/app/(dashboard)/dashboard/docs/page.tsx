@@ -330,9 +330,7 @@ function CheckoutPage({ sessionId, clientSecret }) {
       },
       onSuccess: (payment) => {
         console.log('Payment successful:', payment.id);
-        window.location.href = \
-`/success?payment=${payment.id}\
-`;
+        window.location.href = '/success?payment=' + payment.id;
       },
       onError: (error) => {
         console.error('Payment failed:', error.message);
@@ -374,9 +372,7 @@ app.post('/webhooks/atlas', express.raw({ type: 'application/json' }), (req, res
   const payload = req.body.toString('utf8');
   const expected = crypto
     .createHmac('sha256', secret)
-    .update(`
-${timestamp}.${payload}
-`)
+    .update(timestamp + '.' + payload)
     .digest('hex');
 
   const isValid = signature && crypto.timingSafeEqual(
@@ -1221,9 +1217,7 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
   }
 
   // Compute expected signature
-  const signedPayload = `
-${timestamp}.${payload}
-`;
+  const signedPayload = timestamp + '.' + payload;
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(signedPayload)
@@ -1446,9 +1440,7 @@ const signature = parts.find((p) => p.startsWith('v1='))?.split('=')[1];
 const payload = req.body.toString('utf8');
 const expected = crypto
   .createHmac('sha256', secret)
-  .update(`
-${timestamp}.${payload}
-`)
+  .update(timestamp + '.' + payload)
   .digest('hex');
 
 const isValid = signature && crypto.timingSafeEqual(

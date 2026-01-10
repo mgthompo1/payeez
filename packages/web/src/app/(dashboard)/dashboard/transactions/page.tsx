@@ -5,7 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, Download, Filter, CreditCard, RefreshCw } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Search, Download, Filter, CreditCard, RefreshCw, X, Copy, Check } from 'lucide-react'
 
 const getToday = () => new Date().toISOString().slice(0, 10)
 
@@ -41,6 +47,8 @@ export default function TransactionsPage() {
   const [attemptEnd, setAttemptEnd] = useState(getToday())
   const [sessionStart, setSessionStart] = useState('')
   const [sessionEnd, setSessionEnd] = useState('')
+  const [selectedTx, setSelectedTx] = useState<any>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
     const preset = datePresets.find(p => p.label === datePreset)
@@ -50,6 +58,11 @@ export default function TransactionsPage() {
       setAttemptEnd(end)
     }
   }, [datePreset])
+
+  // Auto-load transactions on mount
+  useEffect(() => {
+    searchTransactions()
+  }, [])
 
   const toStartOfDayIso = (value: string) => {
     const date = new Date(value)
@@ -61,6 +74,12 @@ export default function TransactionsPage() {
     const date = new Date(value)
     date.setHours(23, 59, 59, 999)
     return date.toISOString()
+  }
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(field)
+    setTimeout(() => setCopied(null), 2000)
   }
 
   const searchTransactions = async () => {
@@ -77,10 +96,25 @@ export default function TransactionsPage() {
           psp,
           psp_transaction_id,
           created_at,
+          captured_amount,
+          refunded_amount,
+          failure_code,
+          failure_message,
+          payment_method_type,
+          wallet_type,
+          idempotency_key,
+          tokens (
+            card_brand,
+            card_last4,
+            card_exp_month,
+            card_exp_year
+          ),
           payment_sessions (
+            id,
             customer_email,
             external_id,
-            created_at
+            created_at,
+            metadata
           )
         `)
       .order('created_at', { ascending: false })
@@ -117,8 +151,23 @@ export default function TransactionsPage() {
         currency: t.currency,
         status: t.status,
         psp: t.psp,
+        psp_transaction_id: t.psp_transaction_id,
         customer_email: t.payment_sessions?.customer_email,
         created_at: t.created_at,
+        captured_amount: t.captured_amount,
+        refunded_amount: t.refunded_amount,
+        failure_code: t.failure_code,
+        failure_message: t.failure_message,
+        payment_method_type: t.payment_method_type,
+        wallet_type: t.wallet_type,
+        idempotency_key: t.idempotency_key,
+        card_brand: t.tokens?.card_brand,
+        card_last4: t.tokens?.card_last4,
+        card_exp_month: t.tokens?.card_exp_month,
+        card_exp_year: t.tokens?.card_exp_year,
+        session_id: t.payment_sessions?.id,
+        external_id: t.payment_sessions?.external_id,
+        metadata: t.payment_sessions?.metadata,
       })))
     }
 
@@ -277,7 +326,11 @@ export default function TransactionsPage() {
                 </tr>
               ) : (
                 transactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <tr
+                    key={transaction.id}
+                    onClick={() => setSelectedTx(transaction)}
+                    className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                  >
                     <td className="py-4 px-6">
                       <code className="text-sm text-[#19d1c3]">{transaction.id.slice(0, 8)}...</code>
                     </td>
@@ -301,6 +354,174 @@ export default function TransactionsPage() {
           </table>
         </div>
       </div>
+
+      {/* Transaction Detail Sheet */}
+      <Sheet open={!!selectedTx} onOpenChange={() => setSelectedTx(null)}>
+        <SheetContent className="bg-[#111] border-white/10 w-[500px] sm:max-w-[500px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-white flex items-center justify-between">
+              Transaction Details
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedTx && (
+            <div className="mt-6 space-y-6">
+              {/* Status & Amount */}
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  {getStatusBadge(selectedTx.status)}
+                  <span className="text-2xl font-bold text-white">
+                    {formatAmount(selectedTx.amount, selectedTx.currency)}
+                  </span>
+                </div>
+                {selectedTx.captured_amount > 0 && (
+                  <div className="text-sm text-gray-400">
+                    Captured: {formatAmount(selectedTx.captured_amount, selectedTx.currency)}
+                  </div>
+                )}
+                {selectedTx.refunded_amount > 0 && (
+                  <div className="text-sm text-red-400">
+                    Refunded: {formatAmount(selectedTx.refunded_amount, selectedTx.currency)}
+                  </div>
+                )}
+              </div>
+
+              {/* IDs */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Identifiers</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                    <div>
+                      <div className="text-xs text-gray-500">Transaction ID</div>
+                      <code className="text-sm text-[#19d1c3]">{selectedTx.id}</code>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => copyToClipboard(selectedTx.id, 'id')}
+                      className="h-8 w-8 text-gray-400 hover:text-white"
+                    >
+                      {copied === 'id' ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {selectedTx.psp_transaction_id && (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                      <div>
+                        <div className="text-xs text-gray-500">PSP Transaction ID</div>
+                        <code className="text-sm text-white">{selectedTx.psp_transaction_id}</code>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copyToClipboard(selectedTx.psp_transaction_id, 'psp_id')}
+                        className="h-8 w-8 text-gray-400 hover:text-white"
+                      >
+                        {copied === 'psp_id' ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  )}
+                  {selectedTx.session_id && (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                      <div>
+                        <div className="text-xs text-gray-500">Session ID</div>
+                        <code className="text-sm text-gray-300">{selectedTx.session_id}</code>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copyToClipboard(selectedTx.session_id, 'session')}
+                        className="h-8 w-8 text-gray-400 hover:text-white"
+                      >
+                        {copied === 'session' ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  )}
+                  {selectedTx.external_id && (
+                    <div className="p-3 rounded-lg bg-white/5">
+                      <div className="text-xs text-gray-500">External Reference</div>
+                      <code className="text-sm text-gray-300">{selectedTx.external_id}</code>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</h3>
+                <div className="p-3 rounded-lg bg-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Processor</span>
+                    <Badge className="bg-white/5 text-gray-300 border-white/10">{selectedTx.psp}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Type</span>
+                    <span className="text-white">{selectedTx.wallet_type || selectedTx.payment_method_type || 'card'}</span>
+                  </div>
+                  {selectedTx.card_last4 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Card</span>
+                      <span className="text-white">
+                        {selectedTx.card_brand?.toUpperCase()} •••• {selectedTx.card_last4}
+                        {selectedTx.card_exp_month && selectedTx.card_exp_year && (
+                          <span className="text-gray-500 ml-2">
+                            {selectedTx.card_exp_month}/{selectedTx.card_exp_year}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Customer */}
+              {selectedTx.customer_email && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</h3>
+                  <div className="p-3 rounded-lg bg-white/5">
+                    <div className="text-white">{selectedTx.customer_email}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Failure Info */}
+              {selectedTx.failure_code && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Failure Details</h3>
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 space-y-1">
+                    <div className="text-red-400 font-medium">{selectedTx.failure_code}</div>
+                    {selectedTx.failure_message && (
+                      <div className="text-sm text-red-300">{selectedTx.failure_message}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata */}
+              {selectedTx.metadata && Object.keys(selectedTx.metadata).length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Metadata</h3>
+                  <div className="p-3 rounded-lg bg-white/5">
+                    <pre className="text-xs text-gray-300 overflow-x-auto">
+                      {JSON.stringify(selectedTx.metadata, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamps */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Timeline</h3>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Created</span>
+                    <span className="text-white text-sm">{formatDate(selectedTx.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

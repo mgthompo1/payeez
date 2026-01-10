@@ -34,11 +34,12 @@ import {
   Shield,
   Zap,
   AlertTriangle,
+  Pencil,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { createPspCredential } from './actions'
 
-type PSPName = 'stripe' | 'adyen' | 'authorizenet' | 'chase' | 'nuvei' | 'dlocal' | 'braintree' | 'checkoutcom' | 'airwallex'
+type PSPName = 'stripe' | 'adyen' | 'authorizenet' | 'chase' | 'nuvei' | 'dlocal' | 'braintree' | 'checkoutcom' | 'airwallex' | 'windcave'
 
 interface PSPConfig {
   name: PSPName
@@ -152,6 +153,16 @@ const PSP_CONFIGS: PSPConfig[] = [
       { key: 'public_key', label: 'Public Key', required: true, sensitive: false, placeholder: 'pk_...' },
     ],
   },
+  {
+    name: 'windcave',
+    label: 'Windcave',
+    color: 'from-purple-500 to-violet-600',
+    icon: '🌊',
+    fields: [
+      { key: 'username', label: 'REST API Username', required: true, sensitive: false, placeholder: 'your-username' },
+      { key: 'api_key', label: 'REST API Key', required: true, sensitive: true, placeholder: 'your-api-key' },
+    ],
+  },
 ]
 
 interface PSPCredential {
@@ -174,6 +185,7 @@ export default function ProcessorsPage() {
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({})
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null)
 
   // Load credentials
   const loadCredentials = async () => {
@@ -210,19 +222,31 @@ export default function ProcessorsPage() {
 
     startTransition(async () => {
       try {
-        await createPspCredential({
-          psp: selectedPSP.name,
-          environment,
-          credentials: formData,
-        })
+        if (editingCredentialId) {
+          // Update existing credential
+          await createPspCredential({
+            id: editingCredentialId,
+            psp: selectedPSP.name,
+            environment,
+            credentials: formData,
+          })
+        } else {
+          // Create new credential
+          await createPspCredential({
+            psp: selectedPSP.name,
+            environment,
+            credentials: formData,
+          })
+        }
 
         setShowAddDialog(false)
         setSelectedPSP(null)
         setFormData({})
         setEnvironment('test')
+        setEditingCredentialId(null)
         await loadCredentials()
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to add credential')
+        setError(err instanceof Error ? err.message : 'Failed to save credential')
       }
     })
   }
@@ -251,6 +275,26 @@ export default function ProcessorsPage() {
 
       await loadCredentials()
     })
+  }
+
+  const handleEdit = async (cred: PSPCredential) => {
+    const config = getPSPConfig(cred.psp)
+    if (!config) return
+
+    // Fetch the current credentials to pre-fill the form
+    const { data } = await supabase
+      .from('psp_credentials')
+      .select('credentials_encrypted')
+      .eq('id', cred.id)
+      .single()
+
+    // Note: We can't decrypt here (client-side), so we'll just show empty fields
+    // User needs to re-enter credentials when editing
+    setSelectedPSP(config)
+    setEnvironment(cred.environment)
+    setEditingCredentialId(cred.id)
+    setFormData({}) // Can't pre-fill encrypted fields
+    setShowAddDialog(true)
   }
 
   const getPSPConfig = (name: PSPName) => PSP_CONFIGS.find(p => p.name === name)
@@ -354,6 +398,15 @@ export default function ProcessorsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={() => handleEdit(cred)}
+                      disabled={isPending}
+                      className="text-gray-400 hover:text-[#19d1c3] hover:bg-[#19d1c3]/10"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleDelete(cred.id)}
                       disabled={isPending}
                       className="text-gray-400 hover:text-red-400 hover:bg-red-500/10"
@@ -417,7 +470,7 @@ export default function ProcessorsPage() {
         <DialogContent className="bg-[#111] border-white/10 max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-white">
-              {selectedPSP ? `Connect ${selectedPSP.label}` : 'Add Payment Processor'}
+              {selectedPSP ? (editingCredentialId ? `Edit ${selectedPSP.label}` : `Connect ${selectedPSP.label}`) : 'Add Payment Processor'}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
               {selectedPSP
@@ -529,7 +582,7 @@ export default function ProcessorsPage() {
                   ) : (
                     <>
                       <Zap className="h-4 w-4 mr-2" />
-                      Connect {selectedPSP.label}
+                      {editingCredentialId ? 'Save Changes' : `Connect ${selectedPSP.label}`}
                     </>
                   )}
                 </Button>

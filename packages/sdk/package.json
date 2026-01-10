@@ -1,7 +1,7 @@
 {
   "name": "@atlas/sdk",
-  "version": "0.1.0",
-  "description": "Atlas payment SDK for web applications",
+  "version": "1.1.0",
+  "description": "Atlas Payment SDK - PCI-compliant payment orchestration for web applications",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

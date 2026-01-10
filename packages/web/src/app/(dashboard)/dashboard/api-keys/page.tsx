@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Copy, Eye, EyeOff, Trash2, Key, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
-import { getApiKeys, createApiKey, revokeApiKey, type ApiKey, type CreateKeyResult } from './actions'
+import { getApiKeys, createApiKey, revokeApiKey, onboardUser, type ApiKey, type CreateKeyResult } from './actions'
 
 export default function ApiKeysPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -69,7 +69,26 @@ export default function ApiKeysPage() {
           await loadKeys()
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to create API key')
+        const message = err instanceof Error ? err.message : 'Failed to create API key'
+
+        // If user doesn't have a tenant, auto-onboard them
+        if (message.includes('does not belong to any tenant')) {
+          try {
+            await onboardUser()
+            // Retry creating the key
+            const result = await createApiKey(newKeyLabel, newKeyEnvironment)
+            if (result) {
+              setNewKeyResult(result)
+              await loadKeys()
+            }
+            return
+          } catch (onboardErr) {
+            setError('Failed to set up your account. Please try again.')
+            return
+          }
+        }
+
+        setError(message)
       }
     })
   }

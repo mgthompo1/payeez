@@ -1,10 +1,54 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ArrowUpRight, CreditCard, DollarSign, TrendingUp, AlertCircle, ArrowRight, Terminal, Key, GitBranch, Webhook, ShieldCheck } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Get start of current month
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  // Fetch transaction stats for this month
+  const { data: monthlyTx } = await supabase
+    .from('payment_attempts')
+    .select('amount, currency, status')
+    .gte('created_at', startOfMonth)
+
+  // Calculate totals
+  const totalVolume = monthlyTx?.reduce((sum, tx) => sum + (tx.status === 'captured' ? tx.amount : 0), 0) || 0
+  const txCount = monthlyTx?.length || 0
+
+  // Fetch last 30 days for success rate
+  const { data: last30Days } = await supabase
+    .from('payment_attempts')
+    .select('status')
+    .gte('created_at', thirtyDaysAgo)
+
+  const successCount = last30Days?.filter(tx => tx.status === 'captured' || tx.status === 'authorized').length || 0
+  const totalAttempts = last30Days?.length || 0
+  const successRate = totalAttempts > 0 ? Math.round((successCount / totalAttempts) * 100) : null
+
+  // Fetch recent transactions
+  const { data: recentTx } = await supabase
+    .from('payment_attempts')
+    .select(`
+      id, amount, currency, status, psp, created_at,
+      payment_sessions (customer_email)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Format currency
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+    }).format(amount / 100)
+  }
 
   const stats = [
     {
@@ -18,27 +62,27 @@ export default async function DashboardPage() {
     },
     {
       title: 'Total Volume',
-      value: '$0.00',
-      change: '+0%',
-      changeType: 'neutral',
+      value: formatCurrency(totalVolume),
+      change: txCount > 0 ? `${txCount} txn${txCount !== 1 ? 's' : ''}` : '+0%',
+      changeType: totalVolume > 0 ? 'positive' : 'neutral',
       description: 'This month',
       icon: DollarSign,
       gradient: 'from-[#4cc3ff] to-[#19d1c3]',
     },
     {
       title: 'Transactions',
-      value: '0',
-      change: '+0',
-      changeType: 'neutral',
+      value: txCount.toString(),
+      change: txCount > 0 ? 'active' : '+0',
+      changeType: txCount > 0 ? 'positive' : 'neutral',
       description: 'This month',
       icon: CreditCard,
       gradient: 'from-[#c8ff5a] to-[#ffb454]',
     },
     {
       title: 'Success Rate',
-      value: '—',
-      change: '—',
-      changeType: 'neutral',
+      value: successRate !== null ? `${successRate}%` : '—',
+      change: totalAttempts > 0 ? `${totalAttempts} attempts` : '—',
+      changeType: successRate !== null && successRate >= 90 ? 'positive' : successRate !== null && successRate >= 70 ? 'neutral' : 'negative',
       description: 'Last 30 days',
       icon: TrendingUp,
       gradient: 'from-[#ffb454] to-[#ff7a7a]',
@@ -203,15 +247,64 @@ export default async function DashboardPage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center mb-4">
-            <CreditCard className="h-6 w-6 text-gray-500" />
+        {(!recentTx || recentTx.length === 0) ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center mb-4">
+              <CreditCard className="h-6 w-6 text-gray-500" />
+            </div>
+            <p className="text-gray-400 mb-2">No transactions yet</p>
+            <p className="text-sm text-gray-500 max-w-sm">
+              Once you start processing payments, your recent transactions will appear here.
+            </p>
           </div>
-          <p className="text-gray-400 mb-2">No transactions yet</p>
-          <p className="text-sm text-gray-500 max-w-sm">
-            Once you start processing payments, your recent transactions will appear here.
-          </p>
-        </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-[#8ba3b7] uppercase tracking-wider">ID</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-[#8ba3b7] uppercase tracking-wider">Amount</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-[#8ba3b7] uppercase tracking-wider">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-[#8ba3b7] uppercase tracking-wider">Processor</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-[#8ba3b7] uppercase tracking-wider">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTx.map((tx: any) => (
+                  <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="py-3 px-4">
+                      <code className="text-sm text-[#19d1c3]">{tx.id.slice(0, 8)}...</code>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-white font-medium">{formatCurrency(tx.amount, tx.currency)}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge className={
+                        tx.status === 'captured' || tx.status === 'succeeded'
+                          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                          : tx.status === 'authorized'
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                          : tx.status === 'pending'
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          : 'bg-red-500/10 text-red-400 border-red-500/20'
+                      }>
+                        {tx.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge className="bg-white/5 text-gray-300 border-white/10">{tx.psp}</Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-[#8ba3b7] text-sm">
+                        {new Date(tx.created_at).toLocaleString()}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

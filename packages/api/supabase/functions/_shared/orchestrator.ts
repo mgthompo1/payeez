@@ -459,11 +459,11 @@ export class Orchestrator {
    */
   private async legacyRoute(context: RouteContext): Promise<RouteDecision | null> {
     // Try to get credentials from psp_credentials table
+    // Use whatever environment is configured in the PSP credential itself
     const { data: creds } = await this.supabase
       .from('psp_credentials')
-      .select('psp, credentials_encrypted')
+      .select('psp, credentials_encrypted, environment')
       .eq('tenant_id', context.tenantId)
-      .eq('environment', context.environment)
       .eq('is_active', true)
       .limit(1)
       .single();
@@ -471,9 +471,14 @@ export class Orchestrator {
     if (!creds) return null;
 
     try {
+      const decryptedCreds = await decryptJson(creds.credentials_encrypted || '{}') || {};
+      // Include the PSP credential's environment so adapters know which endpoint to use
       return {
         psp: creds.psp,
-        credentials: await decryptJson(creds.credentials_encrypted || '{}') || {},
+        credentials: {
+          ...decryptedCreds,
+          environment: creds.environment,
+        },
         reason: 'default',
         candidates: [{ psp: creds.psp, weight: 100 }],
         isRetry: false,

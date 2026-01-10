@@ -105,3 +105,21 @@ export async function getCurrentTenant() {
 
   return membership
 }
+
+export async function onboardUser(): Promise<boolean> {
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('onboard_existing_user')
+
+  if (error) {
+    console.error('Error onboarding user:', error)
+    // If already onboarded, that's fine
+    if (error.message?.includes('already has a tenant')) {
+      return true
+    }
+    throw new Error(error.message)
+  }
+
+  revalidatePath('/dashboard')
+  return true
+}
