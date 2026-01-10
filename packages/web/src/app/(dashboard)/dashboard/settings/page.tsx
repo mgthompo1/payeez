@@ -235,6 +235,8 @@ function GeneralSettingsTab() {
 }
 
 // ===== TEST PAYMENTS TAB =====
+const ELEMENTS_URL = process.env.NEXT_PUBLIC_ELEMENTS_URL || 'http://localhost:3001'
+
 function TestPaymentsTab() {
   const [psps, setPsps] = useState<Array<{ psp: string; environment: string }>>([])
   const [selectedPsp, setSelectedPsp] = useState('')
@@ -255,7 +257,24 @@ function TestPaymentsTab() {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`])
   }
 
-  // Load configured PSPs and API key
+  // Persist API key to localStorage
+  useEffect(() => {
+    const savedKey = localStorage.getItem('atlas_test_api_key')
+    if (savedKey) {
+      setApiKey(savedKey)
+    }
+  }, [])
+
+  const handleApiKeyChange = (value: string) => {
+    setApiKey(value)
+    if (value) {
+      localStorage.setItem('atlas_test_api_key', value)
+    } else {
+      localStorage.removeItem('atlas_test_api_key')
+    }
+  }
+
+  // Load configured PSPs
   useEffect(() => {
     const loadData = async () => {
       const supabase = createClient()
@@ -270,15 +289,6 @@ function TestPaymentsTab() {
         setPsps(creds)
         setSelectedPsp(creds[0].psp)
       }
-
-      // Load API key
-      const { data: keys } = await supabase
-        .from('api_keys')
-        .select('key_hash, key_prefix')
-        .eq('is_active', true)
-        .limit(1)
-
-      // Note: We can't get the full key, user needs to enter it
     }
     loadData()
   }, [])
@@ -474,11 +484,11 @@ function TestPaymentsTab() {
                 <Input
                   type="password"
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
+                  onChange={(e) => handleApiKeyChange(e.target.value)}
                   placeholder="sk_test_..."
                   className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-gray-500"
                 />
-                <p className="text-xs text-gray-500">Enter your secret API key from the API Keys page</p>
+                <p className="text-xs text-gray-500">Enter your secret API key from the API Keys tab (saved automatically)</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -533,11 +543,12 @@ function TestPaymentsTab() {
               Test card: <code className="text-[#19d1c3]">4111 1111 1111 1111</code>
             </p>
 
-            <div className="rounded-lg overflow-hidden border border-white/10 mb-4">
+            <div className="rounded-lg overflow-hidden border border-white/10 mb-4 bg-white">
               <iframe
-                src={`http://localhost:3001?sessionId=${sessionId}&parentOrigin=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
-                className="w-full h-[400px] border-0"
+                src={`${ELEMENTS_URL}?sessionId=${sessionId}&parentOrigin=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
+                className="w-full h-[320px] border-0"
                 title="Payment form"
+                allow="payment"
               />
             </div>
 
