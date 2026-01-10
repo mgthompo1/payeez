@@ -1,5 +1,5 @@
 [build]
-  command = "cd ../.. && npm rebuild && cd packages/web && npm run build"
+  command = "npm install lightningcss-linux-x64-gnu@1.29.0 --save-dev --ignore-scripts && npm run build"
   publish = ".next"
 
 [build.environment]
