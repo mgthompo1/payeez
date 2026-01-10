@@ -9,10 +9,10 @@ export interface AuthResult {
 /**
  * Get allowed origins from environment variable
  * Defaults to empty array (no origins allowed) if not set
- * Set PAYEEZ_ALLOWED_ORIGINS as comma-separated list: "https://app.example.com,https://checkout.example.com"
+ * Set ATLAS_ALLOWED_ORIGINS as comma-separated list: "https://app.example.com,https://checkout.example.com"
  */
 function getAllowedOrigins(): string[] {
-  const origins = Deno.env.get('PAYEEZ_ALLOWED_ORIGINS');
+  const origins = Deno.env.get('ATLAS_ALLOWED_ORIGINS');
   if (!origins) {
     return [];
   }
@@ -21,7 +21,7 @@ function getAllowedOrigins(): string[] {
 
 /**
  * Validate and return CORS origin header
- * Only allows origins explicitly listed in PAYEEZ_ALLOWED_ORIGINS
+ * Only allows origins explicitly listed in ATLAS_ALLOWED_ORIGINS
  */
 export function getCorsOrigin(requestOrigin: string | null): string | null {
   if (!requestOrigin) return null;
@@ -30,7 +30,7 @@ export function getCorsOrigin(requestOrigin: string | null): string | null {
 
   // In development/testing, allow localhost if explicitly configured
   if (allowedOrigins.length === 0) {
-    console.warn('[Security] PAYEEZ_ALLOWED_ORIGINS not configured - CORS will block requests');
+    console.warn('[Security] ATLAS_ALLOWED_ORIGINS not configured - CORS will block requests');
     return null;
   }
 
@@ -69,7 +69,7 @@ export function buildCorsHeaders(requestOrigin: string | null): Record<string, s
  * Kept for backwards compatibility during migration
  */
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('PAYEEZ_ALLOWED_ORIGINS')?.split(',')[0] || '',
+  'Access-Control-Allow-Origin': Deno.env.get('ATLAS_ALLOWED_ORIGINS')?.split(',')[0] || '',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-idempotency-key, idempotency-key',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };

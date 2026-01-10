@@ -1,0 +1,101 @@
+<isset name="atlasConfig" value="${require('*/cartridge/scripts/helpers/atlasHelper').getConfig()}" scope="page"/>
+
+<div class="atlas-payment-container" data-atlas-config='${JSON.stringify(atlasConfig)}'>
+
+    <isif condition="${atlasConfig.isTestMode}">
+        <div class="atlas-test-mode-badge">
+            <span class="badge badge-warning">Test Mode</span>
+        </div>
+    </isif>
+
+    <iscomment> Wallet Buttons </iscomment>
+    <div class="atlas-wallet-buttons">
+        <isif condition="${atlasConfig.applePayEnabled}">
+            <button type="button" id="atlas-apple-pay-button" class="btn atlas-apple-pay" style="display:none;">
+                <img src="${URLUtils.staticURL('/images/apple-pay-mark.svg')}" alt="Apple Pay" />
+            </button>
+        </isif>
+        <isif condition="${atlasConfig.googlePayEnabled}">
+            <button type="button" id="atlas-google-pay-button" class="btn atlas-google-pay" style="display:none;">
+                <img src="${URLUtils.staticURL('/images/google-pay-mark.svg')}" alt="Google Pay" />
+            </button>
+        </isif>
+    </div>
+
+    <isif condition="${atlasConfig.applePayEnabled || atlasConfig.googlePayEnabled}">
+        <div class="atlas-divider">
+            <span>${Resource.msg('label.or', 'atlas', null)}</span>
+        </div>
+    </isif>
+
+    <iscomment> Saved Cards </iscomment>
+    <isif condition="${pdict.customer.authenticated && pdict.savedCards && pdict.savedCards.length > 0}">
+        <div class="atlas-saved-cards">
+            <h4>${Resource.msg('label.saved.cards', 'atlas', null)}</h4>
+            <isloop items="${pdict.savedCards}" var="card" status="cardStatus">
+                <div class="form-check saved-card-option">
+                    <input
+                        type="radio"
+                        class="form-check-input"
+                        name="atlas-saved-card"
+                        id="saved-card-${card.id}"
+                        value="${card.id}"
+                        <isif condition="${cardStatus.first}">checked</isif>
+                    />
+                    <label class="form-check-label" for="saved-card-${card.id}">
+                        <span class="card-brand">${card.brand}</span>
+                        <span class="card-last4">•••• ${card.last4}</span>
+                        <span class="card-expiry">${card.expiryMonth}/${card.expiryYear}</span>
+                    </label>
+                </div>
+            </isloop>
+            <div class="form-check saved-card-option">
+                <input
+                    type="radio"
+                    class="form-check-input"
+                    name="atlas-saved-card"
+                    id="saved-card-new"
+                    value="new"
+                />
+                <label class="form-check-label" for="saved-card-new">
+                    ${Resource.msg('label.new.card', 'atlas', null)}
+                </label>
+            </div>
+        </div>
+    </isif>
+
+    <iscomment> Card Element </iscomment>
+    <div class="atlas-card-form" id="atlas-card-form">
+        <div class="form-group">
+            <label for="atlas-card-element">${Resource.msg('label.card.details', 'atlas', null)}</label>
+            <div id="atlas-card-element" class="atlas-card-element">
+                <iscomment> Atlas Card Element mounts here </iscomment>
+            </div>
+            <div id="atlas-card-errors" class="invalid-feedback" role="alert"></div>
+        </div>
+
+        <isif condition="${pdict.customer.authenticated}">
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="atlas-save-card" name="atlas-save-card" />
+                    <label class="form-check-label" for="atlas-save-card">
+                        ${Resource.msg('label.save.card', 'atlas', null)}
+                    </label>
+                </div>
+            </div>
+        </isif>
+    </div>
+
+    <iscomment> Payment Errors </iscomment>
+    <div id="atlas-payment-errors" class="alert alert-danger" style="display:none;"></div>
+
+    <iscomment> Hidden Inputs </iscomment>
+    <input type="hidden" id="atlas-session-id" name="atlas-session-id" value="" />
+    <input type="hidden" id="atlas-transaction-id" name="atlas-transaction-id" value="" />
+    <input type="hidden" id="atlas-payment-method-id" name="atlas-payment-method-id" value="" />
+</div>
+
+<script>
+    window.atlasConfig = <isprint value="${JSON.stringify(atlasConfig)}" encoding="off"/>;
+    window.atlasConfig.createSessionUrl = '${URLUtils.url('Atlas-CreateSession')}';
+</script>

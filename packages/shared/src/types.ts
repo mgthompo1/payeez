@@ -5,6 +5,7 @@
 export type PSPName =
   | 'stripe'
   | 'adyen'
+  | 'windcave'
   | 'authorizenet'
   | 'chase'
   | 'nuvei'
@@ -12,7 +13,7 @@ export type PSPName =
   | 'braintree'
   | 'checkoutcom'
   | 'airwallex';
-export type VaultProvider = 'basis_theory' | 'vgs';
+export type VaultProvider = 'atlas';
 export type Environment = 'test' | 'live';
 
 // Payment method types supported
@@ -106,12 +107,6 @@ export interface ConfirmPaymentRequest {
   apple_pay_token?: string; // PKPaymentToken from Apple
   // Google Pay specific
   google_pay_token?: string; // PaymentData from Google
-  // VGS-specific data with field aliases
-  vgs_data?: {
-    card_number: string;
-    card_expiry: string;
-    card_cvc: string;
-  };
   // Bank account specific
   bank_account?: {
     routing_number?: string; // tokenized
@@ -197,17 +192,17 @@ export interface WebhookEvent {
 // SDK Types (for frontend)
 // ============================================
 
-export interface PayeezConfig {
+export interface AtlasConfig {
   sessionId: string;
   clientSecret: string;
   elementId: string;
-  appearance?: PayeezAppearance;
+  appearance?: AtlasAppearance;
   onSuccess?: (payment: Payment) => void;
-  onError?: (error: PayeezError) => void;
+  onError?: (error: AtlasError) => void;
   onReady?: () => void;
 }
 
-export interface PayeezAppearance {
+export interface AtlasAppearance {
   theme?: 'light' | 'dark';
   variables?: {
     colorPrimary?: string;
@@ -218,7 +213,7 @@ export interface PayeezAppearance {
   };
 }
 
-export interface PayeezError {
+export interface AtlasError {
   code: string;
   message: string;
   decline_code?: string;
@@ -284,9 +279,6 @@ export interface VaultConfig {
   tenant_id: string;
   environment: Environment;
   primary_vault: VaultProvider;
-  bt_public_key?: string;
-  vgs_vault_id?: string;
-  vgs_environment?: 'sandbox' | 'live';
   failover_vault?: VaultProvider;
   is_active: boolean;
 }
@@ -343,12 +335,6 @@ export interface SessionConfig {
   amount: number;
   currency: string;
   capture_provider: VaultProvider;
-  // Basis Theory configuration
-  basis_theory_key?: string;
-  bt_reactor_id?: string;
-  // VGS configuration
-  vgs_vault_id?: string;
-  vgs_environment?: 'sandbox' | 'live';
   fallback_url?: string;
   // Payment methods available for this session
   payment_methods: PaymentMethodType[];

@@ -1,7 +1,7 @@
 {
-  "name": "@payeez/sdk",
+  "name": "@atlas/sdk",
   "version": "0.1.0",
-  "description": "Payeez payment SDK for web applications",
+  "description": "Atlas payment SDK for web applications",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -17,16 +17,13 @@
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "type-check": "tsc --noEmit"
   },
-  "dependencies": {
-    "@basis-theory/basis-theory-js": "^4.30.0"
-  },
   "devDependencies": {
-    "@payeez/shared": "*",
+    "@atlas/shared": "*",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0"
   },
   "peerDependencies": {
-    "@payeez/shared": "*"
+    "@atlas/shared": "*"
   },
   "files": [
     "dist"

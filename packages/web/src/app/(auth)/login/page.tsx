@@ -144,14 +144,14 @@ export default function LoginPage() {
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/brand/payeez-mark.svg"
-              alt="Payeez"
+              src="/brand/atlas-mark.svg"
+              alt="Atlas"
               width={40}
               height={40}
               className="h-10 w-10"
               priority
             />
-            <span className="text-2xl font-bold text-white">Payeez</span>
+            <span className="text-2xl font-bold text-white">Atlas</span>
           </Link>
         </div>
 

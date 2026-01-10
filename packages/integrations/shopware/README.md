@@ -1,8 +1,8 @@
-# Payeez Shopware 6 Integration (Scaffold)
+# Atlas Shopware 6 Integration (Scaffold)
 
-This folder is reserved for the Payeez Shopware 6 plugin.
+This folder is reserved for the Atlas Shopware 6 plugin.
 
 Next steps:
 - Drop in the existing Windcave Shopware plugin source.
-- Rename branding and settings to Payeez.
-- Update API calls to use Payeez sessions and confirmation endpoints.
+- Rename branding and settings to Atlas.
+- Update API calls to use Atlas sessions and confirmation endpoints.

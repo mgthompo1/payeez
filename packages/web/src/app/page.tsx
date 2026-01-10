@@ -12,9 +12,10 @@ import {
   Activity,
   Layers,
   ChevronRight,
+  Lock,
 } from 'lucide-react'
 
-const processors = ['Stripe', 'Adyen', 'Authorize.net', 'Chase', 'Nuvei', 'dLocal', 'Braintree', 'Checkout.com', 'Airwallex']
+const processors = ['Stripe', 'Adyen', 'Windcave', 'Authorize.net', 'Chase', 'Nuvei', 'dLocal', 'Braintree', 'Checkout.com', 'Airwallex']
 
 const pillars = [
   {
@@ -28,8 +29,8 @@ const pillars = [
     icon: Zap,
   },
   {
-    title: 'Vaulted Capture',
-    description: 'Basis Theory tokenization keeps card data out of scope, always.',
+    title: 'Atlas Vault',
+    description: 'PCI Level 1 tokenization keeps card data out of scope, always.',
     icon: ShieldCheck,
   },
   {
@@ -56,9 +57,9 @@ const steps = [
     icon: Terminal,
   },
   {
-    title: 'Mount the SDK',
-    description: 'Secure fields render instantly, tokenize with Basis Theory, then hand off.',
-    icon: Layers,
+    title: 'Mount the Secure Frame',
+    description: 'Secure fields render in an isolated iframe. Atlas tokenizes, you get a token.',
+    icon: Lock,
   },
   {
     title: 'Route the payment',
@@ -77,16 +78,16 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/brand/payeez-mark.svg"
-              alt="Payeez"
+              src="/brand/atlas-mark.svg"
+              alt="Atlas"
               width={36}
               height={36}
               className="h-9 w-9"
               priority
             />
             <div className="leading-tight">
-              <div className="text-sm tracking-[0.2em] text-[#c8ff5a]/80 uppercase">Payeez</div>
-              <div className="text-xs text-[#8ba3b7]">Payment Orchestration</div>
+              <div className="text-sm tracking-[0.2em] text-[#c8ff5a]/80 uppercase">Atlas</div>
+              <div className="text-xs text-[#8ba3b7]">Payment Infrastructure</div>
             </div>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-[#9bb0c2]">
@@ -112,17 +113,17 @@ export default function HomePage() {
             <div className="space-y-8">
               <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-[#9bb0c2] fade-up">
                 <span className="h-2 w-2 rounded-full bg-[#19d1c3] shadow-[0_0_12px_#19d1c3]" />
-                9 processors live
+                System Operational
               </div>
 
               <div className="space-y-6">
                 <h1 className="text-4xl md:text-6xl font-semibold leading-tight fade-up fade-up-1">
-                  Orchestrate payments
-                  <span className="block text-[#c8ff5a]">like infrastructure.</span>
+                  The Payment Vault
+                  <span className="block text-[#c8ff5a]">for Global Scale.</span>
                 </h1>
                 <p className="text-lg text-[#9bb0c2] max-w-xl fade-up fade-up-2">
-                  Payeez is the routing brain between your checkout and every PSP. Build once,
-                  route everywhere, and keep control of latency, cost, and success rates.
+                  Atlas is the PCI Level 1 infrastructure that secures your data and orchestrates
+                  transactions across any provider. Own your vault, route anywhere.
                 </p>
               </div>
 
@@ -143,16 +144,16 @@ export default function HomePage() {
 
               <div className="grid grid-cols-3 gap-4 text-xs text-[#9bb0c2]">
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                  <div className="text-[#c8ff5a] text-lg font-semibold">9</div>
-                  <div>Processors live</div>
+                  <div className="text-[#c8ff5a] text-lg font-semibold">AES-256</div>
+                  <div>Vault Encryption</div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                   <div className="text-[#19d1c3] text-lg font-semibold">150ms</div>
                   <div>Median route time</div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                  <div className="text-[#4cc3ff] text-lg font-semibold">99.95%</div>
-                  <div>Failover coverage</div>
+                  <div className="text-[#4cc3ff] text-lg font-semibold">99.99%</div>
+                  <div>Uptime SLA</div>
                 </div>
               </div>
             </div>
@@ -161,28 +162,28 @@ export default function HomePage() {
               <div className="absolute -inset-6 rounded-[28px] bg-gradient-to-br from-[#19d1c3]/30 via-transparent to-[#c8ff5a]/20 blur-2xl" />
               <div className="relative rounded-3xl border border-white/10 bg-[#0f1621]/90 p-6 backdrop-blur">
                 <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-[#8ba3b7]">
-                  <span>Routing Console</span>
-                  <span className="text-[#c8ff5a]">Live</span>
+                  <span>Vault Monitor</span>
+                  <span className="text-[#c8ff5a]">Active</span>
                 </div>
 
                 <div className="mt-6 grid grid-cols-3 gap-3 text-xs">
                   <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                    <div className="text-[#9bb0c2]">Stripe</div>
+                    <div className="text-[#9bb0c2]">Windcave</div>
                     <div className="text-white text-lg font-semibold">42%</div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                    <div className="text-[#9bb0c2]">Adyen</div>
+                    <div className="text-[#9bb0c2]">Stripe</div>
                     <div className="text-white text-lg font-semibold">31%</div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                    <div className="text-[#9bb0c2]">Fallback</div>
+                    <div className="text-[#9bb0c2]">Adyen</div>
                     <div className="text-white text-lg font-semibold">27%</div>
                   </div>
                 </div>
 
                 <div className="mt-6 rounded-2xl border border-white/10 bg-[#0b111a] p-4">
                   <div className="flex items-center justify-between text-xs text-[#8ba3b7]">
-                    <span>Latency by region</span>
+                    <span>Tokenizer Throughput</span>
                     <span className="text-[#19d1c3]">Stable</span>
                   </div>
                   <div className="mt-4 relative h-32 rounded-xl border border-white/5 bg-gradient-to-br from-white/5 to-transparent overflow-hidden">
@@ -196,11 +197,11 @@ export default function HomePage() {
 
                 <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-[#9bb0c2]">
                   <div className="flex items-center justify-between">
-                    <span>Failure shield</span>
-                    <span className="text-[#c8ff5a]">0.07%</span>
+                    <span>Security Shield</span>
+                    <span className="text-[#c8ff5a]">Protected</span>
                   </div>
                   <div className="mt-2 h-1.5 rounded-full bg-white/10">
-                    <div className="h-1.5 rounded-full bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a]" style={{ width: '94%' }} />
+                    <div className="h-1.5 rounded-full bg-gradient-to-r from-[#19d1c3] to-[#c8ff5a]" style={{ width: '100%' }} />
                   </div>
                 </div>
               </div>
@@ -222,7 +223,7 @@ export default function HomePage() {
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="space-y-3">
               <p className="text-xs uppercase tracking-[0.3em] text-[#8ba3b7]">Capabilities</p>
-              <h2 className="text-3xl md:text-4xl font-semibold">More than a gateway. Smarter routing.</h2>
+              <h2 className="text-3xl md:text-4xl font-semibold">More than a gateway. Smarter infrastructure.</h2>
             </div>
             <p className="text-[#9bb0c2] max-w-xl">
               Route every transaction with intelligent rules, automatic failover,
@@ -256,7 +257,7 @@ export default function HomePage() {
                 <p className="text-xs uppercase tracking-[0.3em] text-[#8ba3b7]">How it works</p>
                 <h2 className="text-3xl md:text-4xl font-semibold">Three steps, zero card data risk.</h2>
                 <p className="text-[#9bb0c2] max-w-lg">
-                  Basis Theory captures the data, Payeez handles orchestration, and you own the outcome.
+                  Atlas captures the data in a PCI-compliant vault, handles orchestration, and you own the outcome.
                 </p>
               </div>
               <Button asChild className="rounded-full bg-white/10 border border-white/10 hover:bg-white/20">
@@ -315,15 +316,15 @@ export default function HomePage() {
   "id": "pay_2xK9mN7vQ3",
   "status": "captured",
   "amount": 4990,
-  "currency": "USD",
-  "psp": "stripe",
+  "currency": "NZD",
+  "psp": "windcave",
   "card": {
     "brand": "visa",
     "last4": "4242"
   },
   "routing": {
     "attempts": 1,
-    "selected_psp": "stripe",
+    "selected_psp": "windcave",
     "selection_reason": "weighted_random"
   }
 }`}
@@ -348,7 +349,7 @@ export default function HomePage() {
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild className="h-12 rounded-full border-white/20 bg-white/5 hover:bg-white/10">
-                  <Link href="/contact">Talk to Payeez</Link>
+                  <Link href="/contact">Talk to Atlas</Link>
                 </Button>
               </div>
             </div>
@@ -361,13 +362,13 @@ export default function HomePage() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <Image
-                src="/brand/payeez-mark.svg"
-                alt="Payeez"
+                src="/brand/atlas-mark.svg"
+                alt="Atlas"
                 width={36}
                 height={36}
                 className="h-9 w-9"
               />
-              <span className="text-sm tracking-[0.3em] uppercase text-[#9bb0c2]">Payeez</span>
+              <span className="text-sm tracking-[0.3em] uppercase text-[#9bb0c2]">Atlas</span>
             </div>
             <p className="text-sm text-[#9bb0c2]">
               Smart payment routing for teams who want control over every transaction.
@@ -400,7 +401,7 @@ export default function HomePage() {
         </div>
 
         <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/10 px-6 pt-6 text-xs text-[#8ba3b7] md:flex-row">
-          <span>© 2024 Payeez. All rights reserved.</span>
+          <span>© 2024 Atlas. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <Link href="https://twitter.com" className="hover:text-white transition-colors">X</Link>
             <Link href="https://github.com" className="hover:text-white transition-colors">GitHub</Link>

@@ -13,25 +13,25 @@ export default function IntegrationsPage() {
     {
       name: 'WooCommerce',
       status: 'scaffold',
-      description: 'Drop-in gateway plugin with Payeez sessions + tokenization. Supports cards, Apple Pay, Google Pay, and subscriptions.',
-      path: 'packages/integrations/payeez-woocommerce',
+      description: 'Drop-in gateway plugin with Atlas sessions + tokenization. Supports cards, Apple Pay, Google Pay, and subscriptions.',
+      path: 'packages/integrations/atlas-woocommerce',
     },
     {
       name: 'Salesforce Commerce Cloud',
       status: 'scaffold',
       description: 'SFRA cartridge with payment sessions, 3DS, webhooks, and saved cards for B2C Commerce.',
-      path: 'packages/integrations/payeez-salesforce-commerce-cloud',
+      path: 'packages/integrations/atlas-salesforce-commerce-cloud',
     },
     {
       name: 'Salesforce OMS',
       status: 'scaffold',
       description: 'Apex classes, LWC component, and webhooks for Salesforce Order Management payments.',
-      path: 'packages/integrations/payeez-salesforce-oms',
+      path: 'packages/integrations/atlas-salesforce-oms',
     },
     {
       name: 'Shopware 6',
       status: 'scaffold',
-      description: 'Payment app scaffold with checkout and admin configuration for Payeez.',
+      description: 'Payment app scaffold with checkout and admin configuration for Atlas.',
       path: 'packages/integrations/shopware',
     },
   ]
@@ -45,12 +45,12 @@ export default function IntegrationsPage() {
     {
       name: 'React Native',
       status: 'planned',
-      description: 'Cross-platform drop-in UI with Payeez Elements + token handling.',
+      description: 'Cross-platform drop-in UI with Atlas Elements + token handling.',
     },
     {
       name: 'Flutter',
       status: 'planned',
-      description: 'Flutter plugin for Payeez Elements and confirmation flow.',
+      description: 'Flutter plugin for Atlas Elements and confirmation flow.',
     },
   ]
 
@@ -74,7 +74,7 @@ export default function IntegrationsPage() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">Commerce platforms</h2>
-            <p className="text-sm text-gray-500">Use these scaffolds to ship Payeez on day one.</p>
+            <p className="text-sm text-gray-500">Use these scaffolds to ship Atlas on day one.</p>
           </div>
         </div>
 

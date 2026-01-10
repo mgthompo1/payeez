@@ -30,7 +30,7 @@ export class CredentialManager {
   constructor(config: CredentialManagerConfig) {
     this.config = config
     // Derive a proper key from the provided key
-    this.key = scryptSync(config.encryptionKey, 'payeez-salt', 32)
+    this.key = scryptSync(config.encryptionKey, 'atlas-salt', 32)
   }
 
   /**

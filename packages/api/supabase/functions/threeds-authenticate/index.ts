@@ -172,9 +172,9 @@ async function handleAuthenticate(
         url: threeDSConfig?.merchant_url,
       },
       requestor_info: {
-        id: Deno.env.get('PAYEEZ_3DS_REQUESTOR_ID'),
-        name: 'Payeez',
-        url: 'https://payeez.co',
+        id: Deno.env.get('ATLAS_3DS_REQUESTOR_ID'),
+        name: 'Atlas',
+        url: 'https://atlas.co',
       },
       device_info: {
         browser_javascript_enabled: true,

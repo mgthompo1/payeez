@@ -1,4 +1,4 @@
-# Payeez Integrations
+# Atlas Integrations
 
 Starter kits and scaffolds for commerce platforms and SDKs live here.
 
@@ -6,5 +6,5 @@ Starter kits and scaffolds for commerce platforms and SDKs live here.
 - `shopware/` - Shopware 6 plugin scaffold (placeholder until the source is added).
 
 Notes:
-- The WooCommerce plugin still contains Windcave-specific classes and endpoints; it is staged here to accelerate the Payeez port.
-- Replace Windcave API calls with Payeez `create-session`, `confirm-payment`, `capture-payment`, and `refund-payment` flows.
+- The WooCommerce plugin still contains Windcave-specific classes and endpoints; it is staged here to accelerate the Atlas port.
+- Replace Windcave API calls with Atlas `create-session`, `confirm-payment`, `capture-payment`, and `refund-payment` flows.

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cartridge xmlns="http://www.demandware.com/xml/impex/cartridge/2006-10-31">
+    <display-name>Atlas SFRA Integration</display-name>
+    <description>Atlas Payment Orchestration for Salesforce Commerce Cloud SFRA</description>
+</cartridge>

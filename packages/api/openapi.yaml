@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Payeez API
+  title: Atlas API
   description: |
     Processor-agnostic payment orchestration API with Basis Theory for PCI-free tokenization.
 
@@ -13,7 +13,7 @@ info:
 
     ## Payment Methods
 
-    Payeez supports multiple payment methods:
+    Atlas supports multiple payment methods:
     - **Card**: Credit and debit cards tokenized via Basis Theory
     - **Apple Pay**: Native Apple Pay integration
     - **Google Pay**: Native Google Pay integration
@@ -26,11 +26,11 @@ info:
 
   version: 1.0.0
   contact:
-    name: Payeez Support
-    url: https://payeez.co/support
+    name: Atlas Support
+    url: https://atlas.co/support
 
 servers:
-  - url: https://api.payeez.co/functions/v1
+  - url: https://api.atlas.co/functions/v1
     description: Production API
 
 security:

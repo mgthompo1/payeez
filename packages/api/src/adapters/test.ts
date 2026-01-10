@@ -198,7 +198,7 @@ export class TestAdapter extends BasePSPAdapter {
           threeDSData: {
             version: cardInfo.version || '2.1.0',
             serverTransactionId: generateTestId('txn'),
-            acsUrl: 'https://test.3ds.payeez.com/acs',
+            acsUrl: 'https://test.3ds.atlas.com/acs',
             acsChallenge: cardInfo.outcome === '3ds_required_challenge',
           },
           rawResponse: {
@@ -207,7 +207,7 @@ export class TestAdapter extends BasePSPAdapter {
             next_action: {
               type: 'use_stripe_sdk',
               redirect_to_url: {
-                url: 'https://test.3ds.payeez.com/challenge',
+                url: 'https://test.3ds.atlas.com/challenge',
               },
             },
           },
@@ -474,7 +474,7 @@ export class TestAdapter extends BasePSPAdapter {
 
     return {
       serverTransactionId,
-      acsUrl: 'https://test.3ds.payeez.com/acs',
+      acsUrl: 'https://test.3ds.atlas.com/acs',
       creq: Buffer.from(JSON.stringify({
         threeDSServerTransID: serverTransactionId,
         acsTransID: generateTestId('acs'),

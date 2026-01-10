@@ -116,7 +116,7 @@ serve(async (req) => {
       .single();
 
     const merchantId = paymentConfig?.apple_pay_merchant_id || Deno.env.get('APPLE_PAY_MERCHANT_ID');
-    const merchantName = paymentConfig?.apple_pay_merchant_name || 'Payeez';
+    const merchantName = paymentConfig?.apple_pay_merchant_name || 'Atlas';
     const certPem = normalizePem(paymentConfig?.apple_pay_merchant_cert_encrypted || Deno.env.get('APPLE_PAY_MERCHANT_CERT'));
     const keyPem = normalizePem(paymentConfig?.apple_pay_merchant_key_encrypted || Deno.env.get('APPLE_PAY_MERCHANT_KEY'));
 

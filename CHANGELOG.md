@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Payeez will be documented in this file.
+All notable changes to Atlas will be documented in this file.
 
 ## [Unreleased]
 
@@ -10,7 +10,7 @@ All notable changes to Payeez will be documented in this file.
 - **Circuit Breaker Pattern** - Automatic failure detection with state transitions (CLOSED → OPEN → HALF_OPEN)
 - **Multi-Region Failover** - SDK automatically routes to healthy endpoints
 - **Health Monitoring** - Continuous health checks with cached results
-- **Basis Theory Reactor Backup** - Payments continue even when Payeez is completely down
+- **Basis Theory Reactor Backup** - Payments continue even when Atlas is completely down
 - **Emergency Direct PSP** - Last-resort direct routing to merchant's primary processor
 - **Multi-Vault Redundancy** - Dual tokenization with Basis Theory + VGS for vault failover
 
@@ -92,7 +92,7 @@ All notable changes to Payeez will be documented in this file.
 - **`basis-theory-reactor/backup-orchestrator.js`** - Backup payment orchestrator
   - Runs in Basis Theory infrastructure (not Supabase)
   - PSP adapters for Stripe, Adyen, Braintree
-  - Activated when Payeez primary systems are down
+  - Activated when Atlas primary systems are down
   - Transaction recording for later sync
 
 - VGS token handling in `confirm-payment` edge function
@@ -230,27 +230,27 @@ All notable changes to Payeez will be documented in this file.
 - Fallback: VGS (Very Good Security)
 - Automatic failover if primary vault is unavailable
 
-**Layer 2: Multi-Region Payeez Endpoints**
+**Layer 2: Multi-Region Atlas Endpoints**
 - Primary and secondary endpoint URLs
 - Health-based routing with circuit breaker
 - Automatic failover on endpoint failures
 
 **Layer 3: Basis Theory Reactor**
 - Backup orchestrator running in BT infrastructure
-- Activated when Payeez is completely unavailable
+- Activated when Atlas is completely unavailable
 - Processes payments directly with merchant's primary PSP
 - Transactions flagged for later reconciliation
 
 **Layer 4: Emergency Direct PSP**
 - Last resort direct routing to processor
-- Bypasses all Payeez infrastructure
+- Bypasses all Atlas infrastructure
 - Ensures payments always succeed
 
 ### 3D Secure Flow
 
 ```
 ┌─────────┐     ┌─────────┐     ┌───────────┐     ┌─────────┐
-│ Client  │────▶│ Payeez  │────▶│ BT 3DS    │────▶│ Card    │
+│ Client  │────▶│ Atlas  │────▶│ BT 3DS    │────▶│ Card    │
 │         │◀────│ API     │◀────│ Service   │◀────│ Network │
 └─────────┘     └─────────┘     └───────────┘     └─────────┘
      │                                                  │
@@ -261,7 +261,7 @@ All notable changes to Payeez will be documented in this file.
 ```
 
 1. Merchant initiates 3DS authentication
-2. Payeez calls Basis Theory Universal 3DS
+2. Atlas calls Basis Theory Universal 3DS
 3. Frictionless: Immediate authentication result
 4. Challenge: User completes verification in iframe
 5. Result returned with authentication value and ECI
@@ -270,7 +270,7 @@ All notable changes to Payeez will be documented in this file.
 
 ```
 ┌─────────┐     ┌─────────┐     ┌───────────┐     ┌─────────┐
-│ Card    │────▶│ Payeez  │────▶│ Basis     │────▶│ Visa/MC │
+│ Card    │────▶│ Atlas  │────▶│ Basis     │────▶│ Visa/MC │
 │ Token   │     │ API     │     │ Theory    │     │ Network │
 └─────────┘     └─────────┘     └───────────┘     └─────────┘
                      │                                  │

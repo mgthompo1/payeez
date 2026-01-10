@@ -16,7 +16,8 @@ import {
   Users,
   FileText,
   Scale,
-  Plug
+  Plug,
+  Terminal
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -30,6 +31,7 @@ import {
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Playground', href: '/dashboard/playground', icon: Terminal },
   { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCard },
   { name: 'Reports', href: '/dashboard/reports', icon: FileText },
   { name: 'Reconciliation', href: '/dashboard/reconciliation', icon: Scale },
@@ -63,15 +65,15 @@ export default async function DashboardLayout({
         <div className="flex h-16 items-center px-6 border-b border-white/10">
           <Link href="/dashboard" className="flex items-center gap-3">
             <Image
-              src="/brand/payeez-mark.svg"
-              alt="Payeez"
+              src="/brand/atlas-mark.svg"
+              alt="Atlas"
               width={36}
               height={36}
               className="h-9 w-9"
               priority
             />
             <div>
-              <div className="text-xs uppercase tracking-[0.3em] text-[#8ba3b7]">Payeez</div>
+              <div className="text-xs uppercase tracking-[0.3em] text-[#8ba3b7]">Atlas</div>
             </div>
           </Link>
         </div>

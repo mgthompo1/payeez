@@ -3,13 +3,13 @@
 // ============================================
 
 // PSP Types
-export type PSPName = 'stripe' | 'adyen' | 'authorizenet' | 'chase' | 'nuvei' | 'dlocal' | 'braintree' | 'checkoutcom' | 'airwallex'
+export type PSPName = 'stripe' | 'adyen' | 'windcave' | 'authorizenet' | 'chase' | 'nuvei' | 'dlocal' | 'braintree' | 'checkoutcom' | 'airwallex'
 
 export type PaymentStatus = 'pending' | 'requires_action' | 'processing' | 'authorized' | 'captured' | 'failed' | 'canceled' | 'refunded'
 
 export type PaymentMethodType = 'card' | 'apple_pay' | 'google_pay' | 'bank_account'
 
-export type VaultProvider = 'basis_theory' | 'vgs'
+export type VaultProvider = 'atlas'
 
 export type CaptureMethod = 'automatic' | 'manual'
 
@@ -133,7 +133,7 @@ export interface PSPCredentials {
 export interface PSPChargeRequest {
   amount: number
   currency: string
-  token: string // Basis Theory token or network token
+  token: string // Atlas Token ID
   capture: boolean
   idempotency_key: string
   metadata?: Record<string, string>

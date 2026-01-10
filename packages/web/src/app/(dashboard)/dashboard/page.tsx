@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { ArrowUpRight, CreditCard, DollarSign, TrendingUp, AlertCircle, ArrowRight, Terminal, Key, GitBranch, Webhook } from 'lucide-react'
+import { ArrowUpRight, CreditCard, DollarSign, TrendingUp, AlertCircle, ArrowRight, Terminal, Key, GitBranch, Webhook, ShieldCheck } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -8,13 +8,22 @@ export default async function DashboardPage() {
 
   const stats = [
     {
+      title: 'Vault Status',
+      value: 'Online',
+      change: 'AES-256',
+      changeType: 'positive',
+      description: 'Tokenizer Active',
+      icon: ShieldCheck,
+      gradient: 'from-[#19d1c3] to-[#c8ff5a]',
+    },
+    {
       title: 'Total Volume',
       value: '$0.00',
       change: '+0%',
       changeType: 'neutral',
       description: 'This month',
       icon: DollarSign,
-      gradient: 'from-[#19d1c3] to-[#4cc3ff]',
+      gradient: 'from-[#4cc3ff] to-[#19d1c3]',
     },
     {
       title: 'Transactions',
@@ -23,7 +32,7 @@ export default async function DashboardPage() {
       changeType: 'neutral',
       description: 'This month',
       icon: CreditCard,
-      gradient: 'from-[#c8ff5a] to-[#19d1c3]',
+      gradient: 'from-[#c8ff5a] to-[#ffb454]',
     },
     {
       title: 'Success Rate',
@@ -32,16 +41,7 @@ export default async function DashboardPage() {
       changeType: 'neutral',
       description: 'Last 30 days',
       icon: TrendingUp,
-      gradient: 'from-[#4cc3ff] to-[#c8ff5a]',
-    },
-    {
-      title: 'Failed',
-      value: '0',
-      change: '0',
-      changeType: 'neutral',
-      description: 'Needs attention',
-      icon: AlertCircle,
-      gradient: 'from-[#ff7a7a] to-[#ffb454]',
+      gradient: 'from-[#ffb454] to-[#ff7a7a]',
     },
   ]
 
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
               <div className="bg-[#0b111a] rounded-lg p-4 font-mono text-sm">
                 <span className="text-[#66788c]">$</span>{' '}
                 <span className="text-[#c8ff5a]">npm install</span>{' '}
-                <span className="text-white">@payeez/sdk</span>
+                <span className="text-white">@atlas/sdk</span>
               </div>
             </div>
 
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-[#8ba3b7] mb-2">3. Mount the payment form</p>
               <div className="bg-[#0b111a] rounded-lg p-4 font-mono text-sm overflow-x-auto">
                 <pre className="text-[#c4d2e1]">
-{`Payeez.mount({
+{`Atlas.mount({
   sessionId: session.id,
   clientSecret: session.client_secret,
   onSuccess: (payment) => redirect('/success')

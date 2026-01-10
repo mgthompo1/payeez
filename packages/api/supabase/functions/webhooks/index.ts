@@ -168,16 +168,16 @@ async function forwardToMerchant(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Payeez-Event-Type': event.type,
-    'X-Payeez-Event-Id': event.psp_event_id,
-    'X-Payeez-Timestamp': `${timestamp}`,
+    'X-Atlas-Event-Type': event.type,
+    'X-Atlas-Event-Id': event.psp_event_id,
+    'X-Atlas-Timestamp': `${timestamp}`,
   }
 
   if (webhookSecret) {
     const signature = createHmac('sha256', webhookSecret)
       .update(`${timestamp}.${payload}`)
       .digest('hex')
-    headers['X-Payeez-Signature'] = `t=${timestamp},v1=${signature}`
+    headers['X-Atlas-Signature'] = `t=${timestamp},v1=${signature}`
   }
 
   try {
@@ -229,8 +229,8 @@ serve(async (req) => {
     let normalizedEvent: NormalizedWebhookEvent
 
     // SECURITY: Default to enforcing signatures in production
-    // Set PAYEEZ_ENFORCE_WEBHOOK_SIGNATURES=false only for local development
-    const enforceSignatures = Deno.env.get('PAYEEZ_ENFORCE_WEBHOOK_SIGNATURES') !== 'false'
+    // Set ATLAS_ENFORCE_WEBHOOK_SIGNATURES=false only for local development
+    const enforceSignatures = Deno.env.get('ATLAS_ENFORCE_WEBHOOK_SIGNATURES') !== 'false'
 
     switch (psp) {
       case 'stripe':

@@ -27,7 +27,7 @@ export default function WebhooksPage() {
   const [webhooks] = useState([
     {
       id: '1',
-      url: 'https://example.com/webhooks/payeez',
+      url: 'https://example.com/webhooks/atlas',
       events: ['payment.captured', 'payment.failed'],
       status: 'active',
       lastDelivery: '2 minutes ago',

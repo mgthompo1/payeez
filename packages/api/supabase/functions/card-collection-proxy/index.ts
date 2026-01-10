@@ -18,7 +18,7 @@
  * - application/x-www-form-urlencoded
  *
  * Flow:
- * 1. Partner sends card data to Payeez proxy URL
+ * 1. Partner sends card data to Atlas proxy URL
  * 2. Proxy extracts card data based on configured field path
  * 3. Card data is tokenized via Basis Theory
  * 4. Tokenized request is forwarded to merchant's destination URL
@@ -147,7 +147,7 @@ serve(async (req) => {
       }
     });
     forwardHeaders.set('Content-Type', contentType);
-    forwardHeaders.set('X-Payeez-Token-Intent', tokenIntentId);
+    forwardHeaders.set('X-Atlas-Token-Intent', tokenIntentId);
 
     const destinationResponse = await fetch(proxyConfig.destination_url, {
       method: req.method,

@@ -23,7 +23,7 @@ function encodeBase64(bytes: Uint8Array): string {
 }
 
 async function getEncryptionKey(): Promise<CryptoKey | null> {
-  const secret = Deno.env.get('PAYEEZ_CREDENTIALS_ENCRYPTION_KEY');
+  const secret = Deno.env.get('ATLAS_CREDENTIALS_ENCRYPTION_KEY');
   if (!secret) {
     return null;
   }
@@ -35,7 +35,7 @@ async function getEncryptionKey(): Promise<CryptoKey | null> {
 export async function encryptJson(payload: Record<string, unknown>): Promise<string> {
   const key = await getEncryptionKey();
   if (!key) {
-    throw new Error('PAYEEZ_CREDENTIALS_ENCRYPTION_KEY is not set');
+    throw new Error('ATLAS_CREDENTIALS_ENCRYPTION_KEY is not set');
   }
 
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
@@ -68,7 +68,7 @@ export async function decryptJson(
 
   const key = await getEncryptionKey();
   if (!key) {
-    throw new Error('PAYEEZ_CREDENTIALS_ENCRYPTION_KEY is not set');
+    throw new Error('ATLAS_CREDENTIALS_ENCRYPTION_KEY is not set');
   }
 
   const parts = payload.split(':');

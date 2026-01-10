@@ -15,7 +15,7 @@ create type service_status as enum ('healthy', 'degraded', 'down');
 -- Track health of our own endpoints and dependencies
 create table if not exists service_health (
   id uuid primary key default gen_random_uuid(),
-  service_name text not null, -- 'payeez_primary', 'payeez_eu', 'basis_theory', 'vgs', 'stripe', etc.
+  service_name text not null, -- 'atlas_primary', 'atlas_eu', 'basis_theory', 'vgs', 'stripe', etc.
   region text not null default 'us', -- 'us', 'eu', 'ap'
   status service_status not null default 'healthy',
   latency_ms integer,
@@ -34,8 +34,8 @@ create table if not exists tenant_resilience_config (
 
   -- Failover chain (ordered list of endpoints to try)
   failover_chain jsonb not null default '[
-    {"name": "primary", "type": "payeez", "region": "us"},
-    {"name": "backup", "type": "payeez", "region": "eu"},
+    {"name": "primary", "type": "atlas", "region": "us"},
+    {"name": "backup", "type": "atlas", "region": "eu"},
     {"name": "reactor", "type": "basis_theory_reactor"},
     {"name": "emergency", "type": "direct_psp"}
   ]',

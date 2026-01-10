@@ -2,7 +2,7 @@
 
 A WooCommerce payment gateway plugin for [Windcave](https://www.windcave.com/) supporting Drop-in and Hosted Fields integration.
 
-> Note: This codebase is being ported to Payeez. Update branding and API calls before production use.
+> Note: This codebase is being ported to Atlas. Update branding and API calls before production use.
 
 ## Features
 

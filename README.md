@@ -1,10 +1,10 @@
-# Payeez
+# Atlas
 
 Processor-agnostic payment orchestration platform built on Basis Theory.
 
 ## Overview
 
-Payeez provides a unified payment API that:
+Atlas provides a unified payment API that:
 - **Captures cards securely** via Basis Theory (no PCI scope for you)
 - **Routes payments** to multiple PSPs (Stripe, Adyen, Authorize.net, Chase, Nuvei, dLocal, Braintree, Checkout.com, Airwallex)
 - **Provides fallback** if capture fails (redirect to PSP hosted checkout)
@@ -15,7 +15,7 @@ Payeez provides a unified payment API that:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  MERCHANT'S PAGE                                                │
-│  └─ payeez.js (tries capture, falls back if fails)             │
+│  └─ atlas.js (tries capture, falls back if fails)             │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -28,7 +28,7 @@ Payeez provides a unified payment API that:
                               │ (token only)
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  PAYEEZ API (Supabase Edge Functions)                           │
+│  ATLAS API (Supabase Edge Functions)                           │
 │  ├─ POST /create-session                                        │
 │  ├─ POST /confirm-payment/{id}                                  │
 │  ├─ Router (picks PSP based on rules)                           │
@@ -46,9 +46,9 @@ Payeez provides a unified payment API that:
 
 | Package | Description |
 |---------|-------------|
-| `@payeez/shared` | Shared types and interfaces |
-| `@payeez/sdk` | Browser SDK with Basis Theory Elements |
-| `@payeez/api` | Supabase Edge Functions (API + webhooks) |
+| `@atlas/shared` | Shared types and interfaces |
+| `@atlas/sdk` | Browser SDK with Basis Theory Elements |
+| `@atlas/api` | Supabase Edge Functions (API + webhooks) |
 
 ## Quick Start
 
@@ -84,7 +84,7 @@ npm run dev
 ### Server-side: Create a payment session
 
 ```javascript
-const response = await fetch('https://api.payeez.co/functions/v1/create-session', {
+const response = await fetch('https://api.atlas.co/functions/v1/create-session', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer sk_test_xxx',
@@ -106,9 +106,9 @@ const { id, client_secret } = await response.json();
 
 ```html
 <div id="payment-form"></div>
-<script src="https://js.payeez.co/v1.js"></script>
+<script src="https://js.atlas.co/v1.js"></script>
 <script>
-  Payeez.mount({
+  Atlas.mount({
     sessionId: 'ps_xxx',
     clientSecret: 'cs_xxx',
     elementId: 'payment-form',
@@ -141,7 +141,7 @@ This routes NZD payments over $100 to Adyen.
 
 ## Webhooks
 
-Payeez normalizes webhooks from all PSPs into a common format:
+Atlas normalizes webhooks from all PSPs into a common format:
 
 ```json
 {
@@ -166,9 +166,9 @@ Event types:
 
 ## PCI Compliance
 
-Payeez is **not** in PCI scope because:
+Atlas is **not** in PCI scope because:
 - Card data is captured directly by Basis Theory Elements
-- Only tokenized references are transmitted to Payeez
+- Only tokenized references are transmitted to Atlas
 - PSP calls use Basis Theory's proxy to forward card data
 
 Your merchants complete their own SAQ based on their PSP.

@@ -167,14 +167,14 @@ export default function SignupPage() {
           <div className="flex justify-center mb-8 lg:hidden">
             <Link href="/" className="flex items-center gap-2">
               <Image
-                src="/brand/payeez-mark.svg"
-                alt="Payeez"
+                src="/brand/atlas-mark.svg"
+                alt="Atlas"
                 width={40}
                 height={40}
                 className="h-10 w-10"
                 priority
               />
-              <span className="text-2xl font-bold text-white">Payeez</span>
+              <span className="text-2xl font-bold text-white">Atlas</span>
             </Link>
           </div>
 
@@ -197,13 +197,13 @@ export default function SignupPage() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 mb-12">
             <Image
-              src="/brand/payeez-mark.svg"
-              alt="Payeez"
+              src="/brand/atlas-mark.svg"
+              alt="Atlas"
               width={48}
               height={48}
               className="h-12 w-12"
             />
-            <span className="text-3xl font-bold text-white">Payeez</span>
+            <span className="text-3xl font-bold text-white">Atlas</span>
           </Link>
 
           <h2 className="text-3xl font-bold text-white mb-4">
@@ -226,7 +226,7 @@ export default function SignupPage() {
 
           <div className="mt-12 p-6 rounded-xl bg-white/5 border border-white/10">
             <p className="text-gray-400 italic">
-              &ldquo;Payeez has transformed how we handle payments. The resilience features mean we never miss a transaction.&rdquo;
+              &ldquo;Atlas has transformed how we handle payments. The resilience features mean we never miss a transaction.&rdquo;
             </p>
             <div className="mt-4 flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#19d1c3] to-[#c8ff5a]" />

@@ -1,6 +1,6 @@
-<svg width="64" height="64" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Payeez icon">
+<svg width="64" height="64" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atlas icon">
   <defs>
-    <linearGradient id="payeez-gradient" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="atlas-gradient" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#19d1c3" />
       <stop offset="1" stop-color="#c8ff5a" />
     </linearGradient>
@@ -8,7 +8,7 @@
   <rect x="6" y="6" width="116" height="116" rx="28" fill="#0b0f14" stroke="#1a2736" stroke-width="4" />
   <path
     d="M44 96 V32 H72 C88 32 100 44 100 60 C100 76 88 88 72 88 H44"
-    stroke="url(#payeez-gradient)"
+    stroke="url(#atlas-gradient)"
     stroke-width="12"
     stroke-linecap="round"
     stroke-linejoin="round"

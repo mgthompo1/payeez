@@ -11,7 +11,7 @@ export interface ServiceHealth {
 
 export interface FailoverEndpoint {
   name: string;
-  type: 'payeez' | 'basis_theory_reactor' | 'direct_psp';
+  type: 'atlas' | 'basis_theory_reactor' | 'direct_psp';
   region?: string;
   url?: string;
 }

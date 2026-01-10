@@ -1,8 +1,8 @@
 {
-  "name": "payeez",
+  "name": "atlas",
   "version": "0.1.0",
   "private": true,
-  "description": "Processor-agnostic payment orchestration platform",
+  "description": "PCI-compliant Payment Orchestration Layer",
   "workspaces": [
     "packages/*"
   ],

@@ -1,6 +1,6 @@
 {
-  "name": "@payeez/integrations",
+  "name": "@atlas/integrations",
   "version": "0.1.0",
   "private": true,
-  "description": "Integration scaffolds for Payeez"
+  "description": "Integration scaffolds for Atlas"
 }

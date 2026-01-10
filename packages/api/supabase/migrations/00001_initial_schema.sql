@@ -1,5 +1,5 @@
 -- ============================================
--- Payeez Database Schema
+-- Atlas Database Schema
 -- Processor-agnostic payment orchestration
 -- ============================================
 

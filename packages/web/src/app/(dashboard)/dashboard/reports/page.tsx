@@ -104,7 +104,7 @@ export default function ReportsPage() {
 
     const supabase = createClient()
     const now = new Date().toISOString().slice(0, 10)
-    const filename = `payeez_${reportType}_${startDate || 'all'}_${endDate || now}.csv`
+    const filename = `atlas_${reportType}_${startDate || 'all'}_${endDate || now}.csv`
 
     try {
       if (reportType === 'transactions') {

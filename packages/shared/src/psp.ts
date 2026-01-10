@@ -9,7 +9,7 @@ export interface AuthorizeRequest {
   currency: string;
   token: {
     id: string;
-    provider: 'basis_theory';
+    provider: 'atlas';
   };
   idempotencyKey: string;
   capture: boolean; // auto-capture or auth-only
@@ -65,7 +65,7 @@ export interface PSPAdapter {
 
   /**
    * Authorize (and optionally capture) a payment
-   * Uses Basis Theory proxy to detokenize card data
+   * Uses Atlas Vault to detokenize card data securely
    */
   authorize(
     req: AuthorizeRequest,

@@ -16,10 +16,10 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Payeez",
-  description: "Smart payment routing across every processor. One API, any PSP.",
+  title: "Atlas",
+  description: "The Payment Vault for Global Scale. Secure infrastructure for orchestration.",
   icons: {
-    icon: "/icon.svg",
+    icon: "/brand/atlas-mark.svg",
   },
 };
 

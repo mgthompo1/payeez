@@ -25,7 +25,7 @@ import {
   BookOpen
 } from 'lucide-react'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.payeez.co/functions/v1'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.atlas.co/functions/v1'
 
 function CodeBlock({ code, language = 'bash', title }: { code: string; language?: string; title?: string }) {
   const [copied, setCopied] = useState(false)
@@ -183,11 +183,11 @@ export default function DocsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header * /}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">API Documentation</h1>
-          <p className="text-gray-500 mt-1">Complete reference for the Payeez API</p>
+          <p className="text-gray-500 mt-1">Complete reference for the Atlas API</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-[#19d1c3] border-[#19d1c3]/30">v1.0</Badge>
@@ -195,7 +195,7 @@ export default function DocsPage() {
         </div>
       </div>
 
-      {/* Base URL */}
+      {/* Base URL * /}
       <div className="rounded-xl bg-[#111] border border-white/10 p-4 flex items-center gap-4">
         <Globe className="h-5 w-5 text-gray-500" />
         <div>
@@ -228,8 +228,7 @@ export default function DocsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all ${
-                    activeTab === tab.id
+                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all ${activeTab === tab.id
                       ? 'bg-[#19d1c3]/10 text-[#19d1c3] border border-[#19d1c3]/20'
                       : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
@@ -243,32 +242,33 @@ export default function DocsPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Quick Start */}
+          {/* Quick Start * /}
           {activeTab === 'quickstart' && (
             <div className="space-y-6">
           <div className="rounded-2xl bg-gradient-to-br from-[#19d1c3]/10 to-[#c8ff5a]/10 border border-[#19d1c3]/20 p-6">
             <h2 className="text-lg font-semibold text-white mb-2">Accept payments in minutes</h2>
-            <p className="text-gray-400 text-sm">Follow these steps to integrate Payeez into your application. Card data never touches your servers - we handle PCI compliance for you.</p>
+            <p className="text-gray-400 text-sm">Follow these steps to integrate Atlas into your application. Card data never touches your servers - we handle PCI compliance for you.</p>
           </div>
 
           <div className="grid gap-6">
-            {/* Step 1 */}
+            {/* Step 1 * /}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-[#19d1c3]/10 flex items-center justify-center text-[#19d1c3] font-bold text-sm">1</div>
                 <h3 className="font-semibold text-white">Install the SDK</h3>
               </div>
               <p className="text-sm text-gray-400 mb-4">
-                Add the Payeez SDK to your frontend application.
+                Add the Atlas SDK to your frontend application.
               </p>
-              <CodeBlock title="Terminal" language="bash" code={`npm install @payeez/sdk
+              <CodeBlock title="Terminal" language="bash" code={`npm install @atlas/sdk
 # or
-yarn add @payeez/sdk
+yarn add @atlas/sdk
 # or
-pnpm add @payeez/sdk`} />
+pnpm add @atlas/sdk`}
+              />
             </div>
 
-            {/* Step 2 */}
+            {/* Step 2 * /}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-[#19d1c3]/10 flex items-center justify-center text-[#19d1c3] font-bold text-sm">2</div>
@@ -297,10 +297,11 @@ pnpm add @payeez/sdk`} />
 });
 
 const session = await response.json();
-// Return session.id and session.client_secret to your frontend`} />
+// Return session.id and session.client_secret to your frontend`}
+              />
             </div>
 
-            {/* Step 3 */}
+            {/* Step 3 * /}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-[#c8ff5a]/10 flex items-center justify-center text-[#c8ff5a] font-bold text-sm">3</div>
@@ -309,11 +310,11 @@ const session = await response.json();
               <p className="text-sm text-gray-400 mb-4">
                 Use the SDK to render secure payment fields. Card data is tokenized client-side and never touches your servers.
               </p>
-              <CodeBlock title="Client - React" language="tsx" code={`import { Payeez } from '@payeez/sdk';
+              <CodeBlock title="Client - React" language="tsx" code={`import { Atlas } from '@atlas/sdk';
 
 function CheckoutPage({ sessionId, clientSecret }) {
   useEffect(() => {
-    Payeez.mount({
+    Atlas.mount({
       sessionId,
       clientSecret,
       elementId: 'payment-form',
@@ -329,7 +330,9 @@ function CheckoutPage({ sessionId, clientSecret }) {
       },
       onSuccess: (payment) => {
         console.log('Payment successful:', payment.id);
-        window.location.href = \`/success?payment=\${payment.id}\`;
+        window.location.href = \
+`/success?payment=${payment.id}\
+`;
       },
       onError: (error) => {
         console.error('Payment failed:', error.message);
@@ -337,14 +340,15 @@ function CheckoutPage({ sessionId, clientSecret }) {
       }
     });
 
-    return () => Payeez.unmount();
+    return () => Atlas.unmount();
   }, [sessionId, clientSecret]);
 
   return <div id="payment-form" />;
-}`} />
+}`}
+              />
             </div>
 
-            {/* Step 4 */}
+            {/* Step 4 * /}
             <div className="rounded-xl bg-[#111] border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-400 font-bold text-sm">4</div>
@@ -355,9 +359,9 @@ function CheckoutPage({ sessionId, clientSecret }) {
               </p>
               <CodeBlock title="Server - Node.js (Express)" language="javascript" code={`import crypto from 'crypto';
 
-app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, res) => {
-  const signatureHeader = req.headers['x-payeez-signature'];
-  const secret = process.env.PAYEEZ_WEBHOOK_SECRET;
+app.post('/webhooks/atlas', express.raw({ type: 'application/json' }), (req, res) => {
+  const signatureHeader = req.headers['x-atlas-signature'];
+  const secret = process.env.ATLAS_WEBHOOK_SECRET;
 
   if (!signatureHeader || !secret) {
     return res.status(401).json({ error: 'Missing signature' });
@@ -370,7 +374,9 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
   const payload = req.body.toString('utf8');
   const expected = crypto
     .createHmac('sha256', secret)
-    .update(\`\${timestamp}.\${payload}\`)
+    .update(`
+${timestamp}.${payload}
+`)
     .digest('hex');
 
   const isValid = signature && crypto.timingSafeEqual(
@@ -397,13 +403,14 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
   }
 
   res.json({ received: true });
-});`} />
+});`}
+              />
             </div>
           </div>
         </div>
       )}
 
-      {/* Authentication */}
+      {/* Authentication * /}
       {activeTab === 'authentication' && (
         <div className="space-y-6">
           <SectionHeader
@@ -415,7 +422,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">API Keys</h3>
             <p className="text-sm text-gray-400">
-              Payeez uses API keys to authenticate requests. You can view and manage your API keys in the{' '}
+              Atlas uses API keys to authenticate requests. You can view and manage your API keys in the{' '}
               <a href="/dashboard/api-keys" className="text-[#19d1c3] hover:underline">Dashboard</a>.
             </p>
 
@@ -442,9 +449,10 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
             <p className="text-sm text-gray-400">
               Include your API key in the <code className="text-[#19d1c3]">Authorization</code> header as a Bearer token.
             </p>
-            <CodeBlock title="Example Request" language="bash" code={`curl ${API_BASE}/create-session \\
-  -H "Authorization: Bearer sk_test_your_api_key" \\
-  -H "Content-Type: application/json"`} />
+            <CodeBlock title="Example Request" language="bash" code={`curl ${API_BASE}/create-session \
+  -H "Authorization: Bearer sk_test_your_api_key" \
+  -H "Content-Type: application/json"`}
+            />
           </div>
 
           <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 flex items-start gap-3">
@@ -464,11 +472,12 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
               Use idempotency keys to safely retry requests without accidentally performing the same operation twice.
               Include the <code className="text-[#19d1c3]">Idempotency-Key</code> header with a unique value.
             </p>
-            <CodeBlock title="Idempotent Request" language="bash" code={`curl -X POST ${API_BASE}/create-session \\
-  -H "Authorization: Bearer sk_test_your_api_key" \\
-  -H "Idempotency-Key: order_12345_payment" \\
-  -H "Content-Type: application/json" \\
-  -d '{"amount": 4990, "currency": "USD"}'`} />
+            <CodeBlock title="Idempotent Request" language="bash" code={`curl -X POST ${API_BASE}/create-session \
+  -H "Authorization: Bearer sk_test_your_api_key" \
+  -H "Idempotency-Key: order_12345_payment" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 4990, "currency": "USD"}'`}
+            />
             <p className="text-xs text-gray-500">
               Idempotency keys expire after 24 hours. We recommend using order IDs or UUIDs.
             </p>
@@ -501,7 +510,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
         </div>
       )}
 
-      {/* Sessions */}
+      {/* Sessions * /}
       {activeTab === 'sessions' && (
         <div className="space-y-6">
           <SectionHeader
@@ -521,27 +530,14 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
             <div className="space-y-6 mt-4">
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
-                <ParamTable params={[
-                  { name: 'amount', type: 'integer', required: true, description: 'Amount in smallest currency unit (cents for USD)' },
-                  { name: 'currency', type: 'string', required: true, description: 'Three-letter ISO 4217 currency code (USD, EUR, GBP)' },
-                  { name: 'external_id', type: 'string', description: 'Your order or cart reference (idempotent if reused)' },
-                  { name: 'capture_method', type: 'string', description: '"automatic" (default) or "manual" for auth-only' },
-                  { name: 'customer', type: 'object', description: 'Customer information', children: [
-                    { name: 'email', type: 'string', description: 'Customer email address' },
-                    { name: 'name', type: 'string', description: 'Customer full name' },
-                  ]},
-                  { name: 'success_url', type: 'string', description: 'Redirect after successful payment' },
-                  { name: 'cancel_url', type: 'string', description: 'Redirect after cancellation' },
-                  { name: 'payment_method_types', type: 'array', description: 'Allowed payment methods: ["card", "apple_pay", "google_pay", "bank_account"]' },
-                  { name: 'metadata', type: 'object', description: 'Custom key-value pairs' },
-                ]} />
+                <ParamTable params={[ { name: 'amount', type: 'integer', required: true, description: 'Amount in smallest currency unit (cents for USD)' }, { name: 'currency', type: 'string', required: true, description: 'Three-letter ISO 4217 currency code (USD, EUR, GBP)' }, { name: 'external_id', type: 'string', description: 'Your order or cart reference (idempotent if reused)' }, { name: 'capture_method', type: 'string', description: '"automatic" (default) or "manual" for auth-only' }, { name: 'customer', type: 'object', description: 'Customer information', children: [ { name: 'email', type: 'string', description: 'Customer email address' }, { name: 'name', type: 'string', description: 'Customer full name' }, ] }, { name: 'success_url', type: 'string', description: 'Redirect after successful payment' }, { name: 'cancel_url', type: 'string', description: 'Redirect after cancellation' }, { name: 'payment_method_types', type: 'array', description: 'Allowed payment methods: ["card", "apple_pay", "google_pay", "bank_account"]' }, { name: 'metadata', type: 'object', description: 'Custom key-value pairs' }, ]} />
               </div>
 
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Example Request</h4>
-                <CodeBlock language="bash" code={`curl -X POST ${API_BASE}/create-session \\
-  -H "Authorization: Bearer sk_test_your_api_key" \\
-  -H "Content-Type: application/json" \\
+                <CodeBlock language="bash" code={`curl -X POST ${API_BASE}/create-session \
+  -H "Authorization: Bearer sk_test_your_api_key" \
+  -H "Content-Type: application/json" \
   -d '{
     "amount": 4990,
     "currency": "USD",
@@ -556,7 +552,8 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
     },
     "success_url": "https://yoursite.com/checkout/success",
     "cancel_url": "https://yoursite.com/checkout/cancel"
-  }'`} />
+  }'`}
+                />
               </div>
 
               <div>
@@ -570,7 +567,8 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
   "external_id": "order_12345",
   "fallback_url": null,
   "created_at": "2024-01-15T10:30:00Z"
-}`} />
+}`}
+                />
               </div>
             </div>
           </EndpointCard>
@@ -579,9 +577,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
             <div className="space-y-4 mt-4">
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Path Parameters</h4>
-                <ParamTable params={[
-                  { name: 'id', type: 'string', required: true, description: 'The session ID (sess_xxx)' },
-                ]} />
+                <ParamTable params={[ { name: 'id', type: 'string', required: true, description: 'The session ID (sess_xxx)' }, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response</h4>
@@ -592,7 +588,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
         </div>
       )}
 
-      {/* Payments */}
+      {/* Payments * /}
       {activeTab === 'payments' && (
         <div className="space-y-6">
           <SectionHeader
@@ -639,24 +635,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
-                <ParamTable params={[
-                  { name: 'payment_method_type', type: 'string', required: true, description: '"card", "apple_pay", "google_pay", or "bank_account"' },
-                  { name: 'token_id', type: 'string', description: 'Token ID from card or bank element' },
-                  { name: 'token_provider', type: 'string', description: '"basis_theory" or "vgs"' },
-                  { name: 'psp', type: 'string', description: 'Force a specific PSP for the initial attempt' },
-                  { name: 'routing_profile_id', type: 'string', description: 'Use a specific routing profile for PSP selection' },
-                  { name: 'apple_pay_token', type: 'string', description: 'Apple Pay token payload (stringified)' },
-                  { name: 'google_pay_token', type: 'string', description: 'Google Pay token payload (stringified)' },
-                  { name: 'vgs_data', type: 'object', description: 'Required when token_provider is vgs', children: [
-                    { name: 'card_number', type: 'string', description: 'VGS card number alias' },
-                    { name: 'card_expiry', type: 'string', description: 'VGS card expiry alias' },
-                    { name: 'card_cvc', type: 'string', description: 'VGS card CVC alias' },
-                  ]},
-                  { name: 'bank_account', type: 'object', description: 'Bank account details (for ACH)', children: [
-                    { name: 'account_holder_name', type: 'string', description: 'Account holder name' },
-                    { name: 'account_type', type: 'string', description: '"checking" or "savings"' },
-                  ]},
-                ]} />
+                <ParamTable params={[ { name: 'payment_method_type', type: 'string', required: true, description: '"card", "apple_pay", "google_pay", or "bank_account"' }, { name: 'token_id', type: 'string', description: 'Token ID from card or bank element' }, { name: 'token_provider', type: 'string', description: '"atlas" or "vgs"' }, { name: 'psp', type: 'string', description: 'Force a specific PSP for the initial attempt' }, { name: 'routing_profile_id', type: 'string', description: 'Use a specific routing profile for PSP selection' }, { name: 'apple_pay_token', type: 'string', description: 'Apple Pay token payload (stringified)' }, { name: 'google_pay_token', type: 'string', description: 'Google Pay token payload (stringified)' }, { name: 'vgs_data', type: 'object', description: 'Required when token_provider is vgs', children: [ { name: 'card_number', type: 'string', description: 'VGS card number alias' }, { name: 'card_expiry', type: 'string', description: 'VGS card expiry alias' }, { name: 'card_cvc', type: 'string', description: 'VGS card CVC alias' }, ]}, { name: 'bank_account', type: 'object', description: 'Bank account details (for ACH)', children: [ { name: 'account_holder_name', type: 'string', description: 'Account holder name' }, { name: 'account_type', type: 'string', description: '"checking" or "savings"' }, ]}, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response</h4>
@@ -682,7 +661,8 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
     "is_retry": false
   },
   "created_at": "2024-01-15T10:31:00Z"
-}`} />
+}`}
+                />
               </div>
             </div>
           </EndpointCard>
@@ -696,9 +676,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
-                <ParamTable params={[
-                  { name: 'amount', type: 'integer', description: 'Partial capture amount in cents (optional)' },
-                ]} />
+                <ParamTable params={[ { name: 'amount', type: 'integer', description: 'Partial capture amount in cents (optional)' }, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response</h4>
@@ -714,7 +692,8 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
   "captured_amount": 2500,
   "refunded_amount": 0,
   "created_at": "2024-01-15T10:35:00Z"
-}`} />
+}`}
+                />
               </div>
             </div>
           </EndpointCard>
@@ -729,10 +708,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
-                <ParamTable params={[
-                  { name: 'amount', type: 'integer', description: 'Partial refund amount in cents (optional)' },
-                  { name: 'reason', type: 'string', description: 'Reason for refund (optional)' },
-                ]} />
+                <ParamTable params={[ { name: 'amount', type: 'integer', description: 'Partial refund amount in cents (optional)' }, { name: 'reason', type: 'string', description: 'Reason for refund (optional)' }, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response</h4>
@@ -744,7 +720,8 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
   "status": "succeeded",
   "reason": "customer_request",
   "created_at": "2024-01-15T10:40:00Z"
-}`} />
+}`}
+                />
               </div>
             </div>
           </EndpointCard>
@@ -752,7 +729,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
         </div>
       )}
 
-      {/* 3D Secure */}
+      {/* 3D Secure * /}
       {activeTab === '3ds' && (
         <div className="space-y-6">
           <SectionHeader
@@ -790,13 +767,7 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
             <div className="space-y-4 mt-4">
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
-                <ParamTable params={[
-                  { name: 'session_id', type: 'string', required: true, description: 'Payment session ID' },
-                  { name: 'token_id', type: 'string', required: true, description: 'Card token from tokenization' },
-                  { name: 'amount', type: 'integer', required: true, description: 'Transaction amount in cents' },
-                  { name: 'currency', type: 'string', required: true, description: 'Three-letter ISO currency code' },
-                  { name: 'challenge_preference', type: 'string', description: 'no_preference, no_challenge, challenge_requested, challenge_mandated' },
-                ]} />
+                <ParamTable params={[ { name: 'session_id', type: 'string', required: true, description: 'Payment session ID' }, { name: 'token_id', type: 'string', required: true, description: 'Card token from tokenization' }, { name: 'amount', type: 'integer', required: true, description: 'Transaction amount in cents' }, { name: 'currency', type: 'string', required: true, description: 'Three-letter ISO currency code' }, { name: 'challenge_preference', type: 'string', description: 'no_preference, no_challenge, challenge_requested, challenge_mandated' }, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response - Frictionless (No Challenge)</h4>
@@ -808,7 +779,8 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
   "eci": "05",
   "ds_transaction_id": "f25084f0-5b16-4c0a-ae5d-b24808a95e4b",
   "liability_shift": true
-}`} />
+}`}
+                />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response - Challenge Required</h4>
@@ -818,7 +790,8 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
   "challenge_required": true,
   "challenge_url": "https://acs.issuer.com/challenge?id=xxx",
   "acs_transaction_id": "d7c1ee99-9478-44a6-b1f2-391e29c6b340"
-}`} />
+}`}
+                />
               </div>
             </div>
           </EndpointCard>
@@ -863,10 +836,10 @@ app.post('/webhooks/payeez', express.raw({ type: 'application/json' }), (req, re
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">SDK Integration</h3>
-            <CodeBlock title="Using 3DS with the SDK" language="typescript" code={`import { Payeez } from '@payeez/sdk';
+            <CodeBlock title="Using 3DS with the SDK" language="typescript" code={`import { Atlas } from '@atlas/sdk';
 
 // After tokenizing the card
-const threeDSResult = await Payeez.authenticate3DS({
+const threeDSResult = await Atlas.authenticate3DS({
   tokenId: 'tok_xxx',
   amount: 4990,
   currency: 'USD',
@@ -879,12 +852,13 @@ if (threeDSResult.liability_shift) {
 }
 
 // Proceed with payment confirmation
-await Payeez.confirm();`} />
+await Atlas.confirm();`}
+            />
           </div>
         </div>
       )}
 
-      {/* Network Tokens */}
+      {/* Network Tokens * /}
       {activeTab === 'network-tokens' && (
         <div className="space-y-6">
           <SectionHeader
@@ -923,11 +897,7 @@ await Payeez.confirm();`} />
             <div className="space-y-4 mt-4">
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
-                <ParamTable params={[
-                  { name: 'session_id', type: 'string', required: true, description: 'Payment session ID' },
-                  { name: 'token_id', type: 'string', required: true, description: 'Card token from tokenization' },
-                  { name: 'request_cryptogram', type: 'boolean', description: 'Generate cryptogram immediately (default: false)' },
-                ]} />
+                <ParamTable params={[ { name: 'session_id', type: 'string', required: true, description: 'Payment session ID' }, { name: 'token_id', type: 'string', required: true, description: 'Card token from tokenization' }, { name: 'request_cryptogram', type: 'boolean', description: 'Generate cryptogram immediately (default: false)' }, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response</h4>
@@ -939,7 +909,8 @@ await Payeez.confirm();`} />
   "tokenExpiryYear": "2028",
   "cryptogram": "AJkBBkhgTQAAAABXSBlRAAAAAAAA",
   "cryptogramType": "TAVV"
-}`} />
+}`}
+                />
               </div>
             </div>
           </EndpointCard>
@@ -952,9 +923,7 @@ await Payeez.confirm();`} />
               </p>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Request Body</h4>
-                <ParamTable params={[
-                  { name: 'session_id', type: 'string', required: true, description: 'Payment session ID' },
-                ]} />
+                <ParamTable params={[ { name: 'session_id', type: 'string', required: true, description: 'Payment session ID' }, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response</h4>
@@ -962,7 +931,8 @@ await Payeez.confirm();`} />
   "cryptogram": "AJkBBkhgTQAAAABXSBlRAAAAAAAA",
   "cryptogramType": "TAVV",
   "expiresAt": "2024-01-15T10:41:00Z"
-}`} />
+}`}
+                />
               </div>
             </div>
           </EndpointCard>
@@ -987,10 +957,10 @@ await Payeez.confirm();`} />
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">SDK Integration</h3>
-            <CodeBlock title="Using Network Tokens" language="typescript" code={`import { Payeez } from '@payeez/sdk';
+            <CodeBlock title="Using Network Tokens" language="typescript" code={`import { Atlas } from '@atlas/sdk';
 
 // Create a network token for a saved card
-const networkToken = await Payeez.createNetworkToken({
+const networkToken = await Atlas.createNetworkToken({
   tokenId: 'tok_xxx',
   requestCryptogram: true
 });
@@ -999,16 +969,17 @@ console.log('Network Token:', networkToken.networkTokenId);
 console.log('Cryptogram:', networkToken.cryptogram);
 
 // For subsequent transactions, generate a new cryptogram
-const cryptogram = await Payeez.getCryptogram(networkToken.networkTokenId);
+const cryptogram = await Atlas.getCryptogram(networkToken.networkTokenId);
 console.log('Next cryptogram:', cryptogram.cryptogram);
 
 // Confirm a payment and request network tokenization
-await Payeez.confirm('card', { networkToken: true });`} />
+await Atlas.confirm('card', { networkToken: true });`}
+            />
           </div>
         </div>
       )}
 
-      {/* Card Collection Proxy */}
+      {/* Card Collection Proxy * /}
       {activeTab === 'card-proxy' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1021,9 +992,7 @@ await Payeez.confirm('card', { networkToken: true });`} />
             <div className="space-y-4 mt-4">
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Headers</h4>
-                <ParamTable params={[
-                  { name: 'BT-PROXY-KEY', type: 'string', required: true, description: 'Proxy key from dashboard configuration' },
-                ]} />
+                <ParamTable params={[ { name: 'ATLAS-PROXY-KEY', type: 'string', required: true, description: 'Proxy key from dashboard configuration' }, ]} />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white mb-3">Response</h4>
@@ -1077,7 +1046,7 @@ await Payeez.confirm('card', { networkToken: true });`} />
                 <div className="h-10 w-10 rounded-full bg-[#19d1c3]/20 flex items-center justify-center mx-auto mb-2">
                   <span className="text-[#19d1c3] font-bold">1</span>
                 </div>
-                <p className="text-xs text-gray-400">Partner sends card data to your Payeez proxy URL</p>
+                <p className="text-xs text-gray-400">Partner sends card data to your Atlas proxy URL</p>
               </div>
               <div className="text-center">
                 <div className="h-10 w-10 rounded-full bg-[#19d1c3]/20 flex items-center justify-center mx-auto mb-2">
@@ -1105,13 +1074,7 @@ await Payeez.confirm('card', { networkToken: true });`} />
             <p className="text-sm text-gray-400 mb-4">
               Configure your proxy in the dashboard. Each proxy has a unique key and destination URL.
             </p>
-            <ParamTable params={[
-              { name: 'destination_url', type: 'string', required: true, description: 'Your endpoint that receives tokenized requests' },
-              { name: 'card_field_path', type: 'string', required: true, description: 'JSON path to card data (e.g., "payment.card" or "data.card_details")' },
-              { name: 'require_auth', type: 'boolean', description: 'Require authentication for incoming requests' },
-              { name: 'auth_type', type: 'string', description: '"api_key" or "jwt" - authentication method' },
-              { name: 'rate_limit_per_minute', type: 'integer', description: 'Maximum requests per minute (default: 100)' },
-            ]} />
+            <ParamTable params={[ { name: 'destination_url', type: 'string', required: true, description: 'Your endpoint that receives tokenized requests' }, { name: 'card_field_path', type: 'string', required: true, description: 'JSON path to card data (e.g., "payment.card" or "data.card_details")' }, { name: 'require_auth', type: 'boolean', description: 'Require authentication for incoming requests' }, { name: 'auth_type', type: 'string', description: '"api_key" or "jwt" - authentication method' }, { name: 'rate_limit_per_minute', type: 'integer', description: 'Maximum requests per minute (default: 100)' }, ]} />
           </div>
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
@@ -1138,7 +1101,7 @@ await Payeez.confirm('card', { networkToken: true });`} />
               <div>
                 <h4 className="text-sm font-medium text-gray-400 mb-2">Incoming Request (from partner)</h4>
                 <CodeBlock language="json" code={`POST /proxy/{proxy_key}
-BT-PROXY-KEY: prx_abc123
+ATLAS-PROXY-KEY: prx_abc123
 
 {
   "booking_id": "BK-12345",
@@ -1155,12 +1118,13 @@ BT-PROXY-KEY: prx_abc123
     }
   },
   "amount": 15000
-}`} />
+}`}
+                />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-400 mb-2">Forwarded to Your Endpoint</h4>
                 <CodeBlock language="json" code={`POST https://your-api.com/bookings
-X-Payeez-Token-Intent: ti_9xN3oP5wQ8
+X-Atlas-Token-Intent: ti_9xN3oP5wQ8
 
 {
   "booking_id": "BK-12345",
@@ -1175,14 +1139,15 @@ X-Payeez-Token-Intent: ti_9xN3oP5wQ8
     }
   },
   "amount": 15000
-}`} />
+}`}
+                />
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Webhooks */}
+      {/* Webhooks * /}
       {activeTab === 'webhooks' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1194,18 +1159,7 @@ X-Payeez-Token-Intent: ti_9xN3oP5wQ8
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">Event Types</h3>
             <div className="space-y-2">
-              {[
-                { type: 'payment.authorized', desc: 'Payment authorized (manual capture mode)', color: 'blue' },
-                { type: 'payment.captured', desc: 'Payment captured successfully', color: 'green' },
-                { type: 'payment.failed', desc: 'Payment attempt failed', color: 'red' },
-                { type: 'payment.requires_action', desc: '3DS or other action required', color: 'amber' },
-                { type: 'payment.canceled', desc: 'Payment was canceled', color: 'gray' },
-                { type: 'refund.succeeded', desc: 'Refund processed successfully', color: 'green' },
-                { type: 'refund.failed', desc: 'Refund attempt failed', color: 'red' },
-                { type: 'dispute.created', desc: 'New dispute/chargeback opened', color: 'red' },
-                { type: 'dispute.updated', desc: 'Dispute status changed', color: 'amber' },
-                { type: 'dispute.closed', desc: 'Dispute resolved', color: 'gray' },
-              ].map((event) => (
+              {[ { type: 'payment.authorized', desc: 'Payment authorized (manual capture mode)', color: 'blue' }, { type: 'payment.captured', desc: 'Payment captured successfully', color: 'green' }, { type: 'payment.failed', desc: 'Payment attempt failed', color: 'red' }, { type: 'payment.requires_action', desc: '3DS or other action required', color: 'amber' }, { type: 'payment.canceled', desc: 'Payment was canceled', color: 'gray' }, { type: 'refund.succeeded', desc: 'Refund processed successfully', color: 'green' }, { type: 'refund.failed', desc: 'Refund attempt failed', color: 'red' }, { type: 'dispute.created', desc: 'New dispute/chargeback opened', color: 'red' }, { type: 'dispute.updated', desc: 'Dispute status changed', color: 'amber' }, { type: 'dispute.closed', desc: 'Dispute resolved', color: 'gray' }, ].map((event) => (
                 <div key={event.type} className="flex items-center gap-4 p-3 rounded-lg bg-white/5">
                   <code className="text-sm text-[#19d1c3] font-mono min-w-[200px]">{event.type}</code>
                   <span className="text-sm text-gray-400">{event.desc}</span>
@@ -1246,18 +1200,16 @@ X-Payeez-Token-Intent: ti_9xN3oP5wQ8
     "id": "req_abc123",
     "idempotency_key": "order_12345_payment"
   }
-}`} />
+}`}
+            />
           </div>
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">Verifying Signatures</h3>
             <p className="text-sm text-gray-400 mb-4">
-              Always verify webhook signatures to ensure events are from Payeez. We include these headers:
+              Always verify webhook signatures to ensure events are from Atlas. We include these headers:
             </p>
-            <ParamTable params={[
-              { name: 'x-payeez-signature', type: 'string', description: 'HMAC-SHA256 signature of the payload' },
-              { name: 'x-payeez-timestamp', type: 'string', description: 'Unix timestamp when the event was sent' },
-            ]} />
+            <ParamTable params={[ { name: 'x-atlas-signature', type: 'string', description: 'HMAC-SHA256 signature of the payload' }, { name: 'x-atlas-timestamp', type: 'string', description: 'Unix timestamp when the event was sent' }, ]} />
 
             <CodeBlock title="Verification Example" language="typescript" code={`import crypto from 'crypto';
 
@@ -1269,7 +1221,9 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
   }
 
   // Compute expected signature
-  const signedPayload = \`\${timestamp}.\${payload}\`;
+  const signedPayload = `
+${timestamp}.${payload}
+`;
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(signedPayload)
@@ -1280,7 +1234,8 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
     Buffer.from(signature),
     Buffer.from(expectedSignature)
   );
-}`} />
+}`}
+            />
           </div>
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
@@ -1325,18 +1280,19 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
         </div>
       )}
 
-      {/* SDK Reference */}
+      {/* SDK Reference * /}
       {activeTab === 'sdk' && (
         <div className="space-y-6">
           <SectionHeader
             icon={FileCode}
             title="SDK Reference"
-            description="Complete reference for the Payeez JavaScript SDK"
+            description="Complete reference for the Atlas JavaScript SDK"
           />
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">Installation</h3>
-            <CodeBlock language="bash" code={`npm install @payeez/sdk`} />
+            <CodeBlock language="bash" code={`npm install @atlas/sdk`}
+            />
           </div>
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-6">
@@ -1345,52 +1301,44 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-white/5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <code className="text-sm text-[#19d1c3]">Payeez.configure(options)</code>
+                  <code className="text-sm text-[#19d1c3]">Atlas.configure(options)</code>
                   <Badge variant="outline" className="text-xs">Optional</Badge>
                 </div>
                 <p className="text-sm text-gray-400">Configure the SDK globally. Call before other methods.</p>
-                <CodeBlock language="typescript" code={`Payeez.configure({
+                <CodeBlock language="typescript" code={`Atlas.configure({
   environment: 'production', // 'sandbox' | 'production'
   locale: 'en-US',
   resilience: {
     enableFallback: true,
-    fallbackEndpoints: ['https://fallback.payeez.co'],
+    fallbackEndpoints: ['https://fallback.atlas.co'],
     circuitBreakerThreshold: 5
   }
-});`} />
+});`}
+                />
               </div>
 
               <div className="p-4 rounded-lg bg-white/5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <code className="text-sm text-[#19d1c3]">Payeez.mount(config)</code>
+                  <code className="text-sm text-[#19d1c3]">Atlas.mount(config)</code>
                   <Badge variant="outline" className="text-xs">Required</Badge>
                 </div>
                 <p className="text-sm text-gray-400">Mount the payment form in a DOM element.</p>
-                <ParamTable params={[
-                  { name: 'sessionId', type: 'string', required: true, description: 'Payment session ID from your server' },
-                  { name: 'clientSecret', type: 'string', required: true, description: 'Client secret from session creation' },
-                  { name: 'elementId', type: 'string', required: true, description: 'DOM element ID to mount into' },
-                  { name: 'appearance', type: 'object', description: 'Styling options (theme, variables, rules)' },
-                  { name: 'paymentMethods', type: 'array', description: 'Enabled methods: ["card", "apple_pay", "google_pay"]' },
-                  { name: 'onReady', type: 'function', description: 'Called when form is ready' },
-                  { name: 'onSuccess', type: 'function', description: 'Called with payment object on success' },
-                  { name: 'onError', type: 'function', description: 'Called with error object on failure' },
-                  { name: 'onValidationChange', type: 'function', description: 'Called when form validation changes' },
-                ]} />
+                <ParamTable params={[ { name: 'sessionId', type: 'string', required: true, description: 'Payment session ID from your server' }, { name: 'clientSecret', type: 'string', required: true, description: 'Client secret from session creation' }, { name: 'elementId', type: 'string', required: true, description: 'DOM element ID to mount into' }, { name: 'appearance', type: 'object', description: 'Styling options (theme, variables, rules)' }, { name: 'paymentMethods', type: 'array', description: 'Enabled methods: ["card", "apple_pay", "google_pay"]' }, { name: 'onReady', type: 'function', description: 'Called when form is ready' }, { name: 'onSuccess', type: 'function', description: 'Called with payment object on success' }, { name: 'onError', type: 'function', description: 'Called with error object on failure' }, { name: 'onValidationChange', type: 'function', description: 'Called when form validation changes' }, ]} />
               </div>
 
               <div className="p-4 rounded-lg bg-white/5 space-y-3">
-                <code className="text-sm text-[#19d1c3]">Payeez.unmount()</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.unmount()</code>
                 <p className="text-sm text-gray-400">Clean up and remove the payment form. Call when navigating away or on component unmount.</p>
               </div>
 
               <div className="p-4 rounded-lg bg-white/5 space-y-3">
-                <code className="text-sm text-[#19d1c3]">Payeez.confirm(options?)</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.confirm(options?)</code>
                 <p className="text-sm text-gray-400">Manually trigger payment confirmation. Usually automatic on form submit.</p>
-                <CodeBlock language="typescript" code={`const payment = await Payeez.confirm({
+                <CodeBlock language="typescript" code={`const payment = await Atlas.confirm({
   paymentMethod: 'card', // Optional: specify method
   returnUrl: 'https://yoursite.com/complete' // For 3DS redirects
-});`} />
+});`}
+                />
               </div>
             </div>
           </div>
@@ -1399,9 +1347,9 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
             <h3 className="font-semibold text-white">3D Secure Methods</h3>
 
             <div className="p-4 rounded-lg bg-white/5 space-y-3">
-              <code className="text-sm text-[#19d1c3]">Payeez.authenticate3DS(config)</code>
+              <code className="text-sm text-[#19d1c3]">Atlas.authenticate3DS(config)</code>
               <p className="text-sm text-gray-400">Initiate 3D Secure authentication for a payment.</p>
-              <CodeBlock language="typescript" code={`const result = await Payeez.authenticate3DS({
+              <CodeBlock language="typescript" code={`const result = await Atlas.authenticate3DS({
   sessionId: 'sess_xxx',
   tokenId: 'tok_xxx',
   amount: 4990,
@@ -1413,7 +1361,8 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
   }
 });
 
-// result: { status: 'Y', authenticationValue: '...', eci: '05', liabilityShift: true }`} />
+// result: { status: 'Y', authenticationValue: '...', eci: '05', liabilityShift: true }`}
+              />
             </div>
           </div>
 
@@ -1421,22 +1370,24 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
             <h3 className="font-semibold text-white">Network Token Methods</h3>
 
             <div className="p-4 rounded-lg bg-white/5 space-y-3">
-              <code className="text-sm text-[#19d1c3]">Payeez.createNetworkToken(config)</code>
+              <code className="text-sm text-[#19d1c3]">Atlas.createNetworkToken(config)</code>
               <p className="text-sm text-gray-400">Create a network token for improved authorization rates.</p>
-              <CodeBlock language="typescript" code={`const networkToken = await Payeez.createNetworkToken({
+              <CodeBlock language="typescript" code={`const networkToken = await Atlas.createNetworkToken({
   sessionId: 'sess_xxx',
   tokenId: 'tok_xxx',
   requestCryptogram: true
 });
 
-// networkToken: { networkTokenId: 'nt_xxx', network: 'visa', cryptogram: '...' }`} />
+// networkToken: { networkTokenId: 'nt_xxx', network: 'visa', cryptogram: '...' }`}
+              />
             </div>
 
             <div className="p-4 rounded-lg bg-white/5 space-y-3">
-              <code className="text-sm text-[#19d1c3]">Payeez.getCryptogram(networkTokenId)</code>
+              <code className="text-sm text-[#19d1c3]">Atlas.getCryptogram(networkTokenId)</code>
               <p className="text-sm text-gray-400">Generate a new cryptogram for an existing network token.</p>
-              <CodeBlock language="typescript" code={`const cryptogram = await Payeez.getCryptogram('nt_xxx');
-// cryptogram: { cryptogram: '...', cryptogramType: 'TAVV', expiresAt: '...' }`} />
+              <CodeBlock language="typescript" code={`const cryptogram = await Atlas.getCryptogram('nt_xxx');
+// cryptogram: { cryptogram: '...', cryptogramType: 'TAVV', expiresAt: '...' }`}
+              />
             </div>
           </div>
 
@@ -1445,11 +1396,11 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-white/5 space-y-2">
-                <code className="text-sm text-[#19d1c3]">Payeez.isApplePayAvailable()</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.isApplePayAvailable()</code>
                 <p className="text-xs text-gray-400">Returns boolean - true if Apple Pay is available on this device/browser.</p>
               </div>
               <div className="p-4 rounded-lg bg-white/5 space-y-2">
-                <code className="text-sm text-[#19d1c3]">Payeez.isGooglePayAvailable()</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.isGooglePayAvailable()</code>
                 <p className="text-xs text-gray-400">Returns Promise&lt;boolean&gt; - checks Google Pay availability asynchronously.</p>
               </div>
             </div>
@@ -1460,19 +1411,19 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-white/5 space-y-2">
-                <code className="text-sm text-[#19d1c3]">Payeez.getCircuitBreakerState()</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.getCircuitBreakerState()</code>
                 <p className="text-xs text-gray-400">Returns current state: 'CLOSED' | 'OPEN' | 'HALF_OPEN'</p>
               </div>
               <div className="p-4 rounded-lg bg-white/5 space-y-2">
-                <code className="text-sm text-[#19d1c3]">Payeez.getHealthStatus()</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.getHealthStatus()</code>
                 <p className="text-xs text-gray-400">Returns Promise with endpoint health info</p>
               </div>
               <div className="p-4 rounded-lg bg-white/5 space-y-2">
-                <code className="text-sm text-[#19d1c3]">Payeez.getPendingSyncTransactions()</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.getPendingSyncTransactions()</code>
                 <p className="text-xs text-gray-400">Returns transactions processed in fallback mode</p>
               </div>
               <div className="p-4 rounded-lg bg-white/5 space-y-2">
-                <code className="text-sm text-[#19d1c3]">Payeez.syncPendingTransactions()</code>
+                <code className="text-sm text-[#19d1c3]">Atlas.syncPendingTransactions()</code>
                 <p className="text-xs text-gray-400">Sync fallback transactions when primary recovers</p>
               </div>
             </div>
@@ -1485,8 +1436,8 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
               <p className="text-sm text-gray-400">Verify webhook signatures server-side using HMAC-SHA256.</p>
               <CodeBlock language="typescript" code={`import crypto from 'crypto';
 
-const signatureHeader = req.headers['x-payeez-signature'];
-const secret = process.env.PAYEEZ_WEBHOOK_SECRET;
+const signatureHeader = req.headers['x-atlas-signature'];
+const secret = process.env.ATLAS_WEBHOOK_SECRET;
 
 const parts = signatureHeader.split(',');
 const timestamp = parts.find((p) => p.startsWith('t='))?.split('=')[1];
@@ -1495,19 +1446,22 @@ const signature = parts.find((p) => p.startsWith('v1='))?.split('=')[1];
 const payload = req.body.toString('utf8');
 const expected = crypto
   .createHmac('sha256', secret)
-  .update(\`\${timestamp}.\${payload}\`)
+  .update(`
+${timestamp}.${payload}
+`)
   .digest('hex');
 
 const isValid = signature && crypto.timingSafeEqual(
   Buffer.from(signature),
   Buffer.from(expected)
-);`} />
+);`}
+              />
             </div>
           </div>
         </div>
       )}
 
-      {/* Errors */}
+      {/* Errors * /}
       {activeTab === 'errors' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1525,26 +1479,16 @@ const isValid = signature && crypto.timingSafeEqual(
     "message": "Your card was declined.",
     "param": "card_number",
     "decline_code": "insufficient_funds",
-    "doc_url": "https://docs.payeez.co/errors/card_declined"
+    "doc_url": "https://docs.atlas.co/errors/card_declined"
   }
-}`} />
+}`}
+            />
           </div>
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">HTTP Status Codes</h3>
             <div className="space-y-2">
-              {[
-                { code: '200', desc: 'Success', color: 'green' },
-                { code: '400', desc: 'Bad Request - Invalid parameters', color: 'amber' },
-                { code: '401', desc: 'Unauthorized - Invalid or missing API key', color: 'red' },
-                { code: '402', desc: 'Payment Required - Card declined', color: 'red' },
-                { code: '403', desc: 'Forbidden - Insufficient permissions', color: 'red' },
-                { code: '404', desc: 'Not Found - Resource doesn\'t exist', color: 'amber' },
-                { code: '409', desc: 'Conflict - Idempotency conflict', color: 'amber' },
-                { code: '429', desc: 'Too Many Requests - Rate limit exceeded', color: 'amber' },
-                { code: '500', desc: 'Server Error - Something went wrong', color: 'red' },
-                { code: '503', desc: 'Service Unavailable - Temporary outage', color: 'red' },
-              ].map((status) => (
+              {[ { code: '200', desc: 'Success', color: 'green' }, { code: '400', desc: 'Bad Request - Invalid parameters', color: 'amber' }, { code: '401', desc: 'Unauthorized - Invalid or missing API key', color: 'red' }, { code: '402', desc: 'Payment Required - Card declined', color: 'red' }, { code: '403', desc: 'Forbidden - Insufficient permissions', color: 'red' }, { code: '404', desc: 'Not Found - Resource doesn\'t exist', color: 'amber' }, { code: '409', desc: 'Conflict - Idempotency conflict', color: 'amber' }, { code: '429', desc: 'Too Many Requests - Rate limit exceeded', color: 'amber' }, { code: '500', desc: 'Server Error - Something went wrong', color: 'red' }, { code: '503', desc: 'Service Unavailable - Temporary outage', color: 'red' }, ].map((status) => (
                 <div key={status.code} className="flex items-center gap-4 p-3 rounded-lg bg-white/5">
                   <Badge className={`bg-${status.color}-500/10 text-${status.color}-400 border-${status.color}-500/20 font-mono`}>
                     {status.code}
@@ -1584,16 +1528,7 @@ const isValid = signature && crypto.timingSafeEqual(
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">Common Decline Codes</h3>
             <div className="grid md:grid-cols-2 gap-2">
-              {[
-                { code: 'insufficient_funds', desc: 'Not enough funds' },
-                { code: 'lost_card', desc: 'Card reported lost' },
-                { code: 'stolen_card', desc: 'Card reported stolen' },
-                { code: 'expired_card', desc: 'Card has expired' },
-                { code: 'incorrect_cvc', desc: 'CVC code incorrect' },
-                { code: 'processing_error', desc: 'Temporary processor issue' },
-                { code: 'do_not_honor', desc: 'Issuer declined' },
-                { code: 'card_not_supported', desc: 'Card type not accepted' },
-              ].map((decline) => (
+              {[ { code: 'insufficient_funds', desc: 'Not enough funds' }, { code: 'lost_card', desc: 'Card reported lost' }, { code: 'stolen_card', desc: 'Card reported stolen' }, { code: 'expired_card', desc: 'Card has expired' }, { code: 'incorrect_cvc', desc: 'CVC code incorrect' }, { code: 'processing_error', desc: 'Temporary processor issue' }, { code: 'do_not_honor', desc: 'Issuer declined' }, { code: 'card_not_supported', desc: 'Card type not accepted' }, ].map((decline) => (
                 <div key={decline.code} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
                   <code className="text-xs text-red-400">{decline.code}</code>
                   <span className="text-xs text-gray-400">{decline.desc}</span>
@@ -1605,7 +1540,7 @@ const isValid = signature && crypto.timingSafeEqual(
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">Error Handling Example</h3>
             <CodeBlock language="typescript" code={`try {
-  const payment = await Payeez.confirm();
+  const payment = await Atlas.confirm();
   console.log('Payment succeeded:', payment.id);
 } catch (error) {
   switch (error.type) {
@@ -1628,12 +1563,13 @@ const isValid = signature && crypto.timingSafeEqual(
     default:
       showError('An unexpected error occurred.');
   }
-}`} />
+}`}
+            />
           </div>
         </div>
       )}
 
-      {/* Testing */}
+      {/* Testing * /}
       {activeTab === 'testing' && (
         <div className="space-y-6">
           <SectionHeader
@@ -1663,12 +1599,7 @@ const isValid = signature && crypto.timingSafeEqual(
               <div className="p-4 rounded-lg bg-green-500/5 border border-green-500/20">
                 <h4 className="text-sm font-medium text-green-400 mb-3">Successful Payments</h4>
                 <div className="grid md:grid-cols-2 gap-2">
-                  {[
-                    { number: '4242 4242 4242 4242', brand: 'Visa', desc: 'Succeeds' },
-                    { number: '5555 5555 5555 4444', brand: 'Mastercard', desc: 'Succeeds' },
-                    { number: '3782 822463 10005', brand: 'Amex', desc: 'Succeeds' },
-                    { number: '6011 1111 1111 1117', brand: 'Discover', desc: 'Succeeds' },
-                  ].map((card) => (
+                  {[ { number: '4242 4242 4242 4242', brand: 'Visa', desc: 'Succeeds' }, { number: '5555 5555 5555 4444', brand: 'Mastercard', desc: 'Succeeds' }, { number: '3782 822463 10005', brand: 'Amex', desc: 'Succeeds' }, { number: '6011 1111 1111 1117', brand: 'Discover', desc: 'Succeeds' }, ].map((card) => (
                     <div key={card.number} className="flex items-center gap-3 p-2 rounded bg-white/5">
                       <code className="text-xs text-white font-mono">{card.number}</code>
                       <span className="text-xs text-gray-500">{card.brand}</span>
@@ -1680,14 +1611,7 @@ const isValid = signature && crypto.timingSafeEqual(
               <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20">
                 <h4 className="text-sm font-medium text-red-400 mb-3">Declined Payments</h4>
                 <div className="grid md:grid-cols-2 gap-2">
-                  {[
-                    { number: '4000 0000 0000 0002', desc: 'Card declined' },
-                    { number: '4000 0000 0000 9995', desc: 'Insufficient funds' },
-                    { number: '4000 0000 0000 9987', desc: 'Lost card' },
-                    { number: '4000 0000 0000 9979', desc: 'Stolen card' },
-                    { number: '4000 0000 0000 0069', desc: 'Expired card' },
-                    { number: '4000 0000 0000 0127', desc: 'Incorrect CVC' },
-                  ].map((card) => (
+                  {[ { number: '4000 0000 0000 0002', desc: 'Card declined' }, { number: '4000 0000 0000 9995', desc: 'Insufficient funds' }, { number: '4000 0000 0000 9987', desc: 'Lost card' }, { number: '4000 0000 0000 9979', desc: 'Stolen card' }, { number: '4000 0000 0000 0069', desc: 'Expired card' }, { number: '4000 0000 0000 0127', desc: 'Incorrect CVC' }, ].map((card) => (
                     <div key={card.number} className="flex items-center gap-3 p-2 rounded bg-white/5">
                       <code className="text-xs text-white font-mono">{card.number}</code>
                       <span className="text-xs text-gray-500">{card.desc}</span>
@@ -1699,12 +1623,7 @@ const isValid = signature && crypto.timingSafeEqual(
               <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
                 <h4 className="text-sm font-medium text-blue-400 mb-3">3D Secure Testing</h4>
                 <div className="grid md:grid-cols-2 gap-2">
-                  {[
-                    { number: '4000 0000 0000 3220', desc: '3DS required, succeeds' },
-                    { number: '4000 0000 0000 3063', desc: '3DS required, fails' },
-                    { number: '4000 0000 0000 3055', desc: '3DS optional, succeeds' },
-                    { number: '4000 0027 6000 3184', desc: 'Frictionless (no challenge)' },
-                  ].map((card) => (
+                  {[ { number: '4000 0000 0000 3220', desc: '3DS required, succeeds' }, { number: '4000 0000 0000 3063', desc: '3DS required, fails' }, { number: '4000 0000 0000 3055', desc: '3DS optional, succeeds' }, { number: '4000 0027 6000 3184', desc: 'Frictionless (no challenge)' }, ].map((card) => (
                     <div key={card.number} className="flex items-center gap-3 p-2 rounded bg-white/5">
                       <code className="text-xs text-white font-mono">{card.number}</code>
                       <span className="text-xs text-gray-500">{card.desc}</span>
@@ -1720,30 +1639,22 @@ const isValid = signature && crypto.timingSafeEqual(
             <p className="text-sm text-gray-400">
               Use our CLI or a tunnel service to receive webhooks during development.
             </p>
-            <CodeBlock title="Using Payeez CLI" language="bash" code={`# Install the CLI
-npm install -g @payeez/cli
+            <CodeBlock title="Using Atlas CLI" language="bash" code={`# Install the CLI
+npm install -g @atlas/cli
 
 # Forward webhooks to your local server
-payeez listen --forward-to localhost:3000/webhooks/payeez
+atlas listen --forward-to localhost:3000/webhooks/atlas
 
 # Output:
 # Ready! Webhook signing secret: whsec_xxx
-# Forwarding webhooks to http://localhost:3000/webhooks/payeez`} />
+# Forwarding webhooks to http://localhost:3000/webhooks/atlas`}
+            />
           </div>
 
           <div className="rounded-xl bg-[#111] border border-white/10 p-6 space-y-4">
             <h3 className="font-semibold text-white">Going Live Checklist</h3>
             <div className="space-y-2">
-              {[
-                'Switch to live API keys (sk_live_...)',
-                'Update webhook endpoints to production URLs',
-                'Test with real cards (small amounts)',
-                'Verify webhook signature validation',
-                'Enable 3D Secure for PSD2 compliance',
-                'Set up monitoring and alerting',
-                'Configure proper error handling',
-                'Remove any hardcoded test values',
-              ].map((item, i) => (
+              {[ 'Switch to live API keys (sk_live_...)', 'Update webhook endpoints to production URLs', 'Test with real cards (small amounts)', 'Verify webhook signature validation', 'Enable 3D Secure for PSD2 compliance', 'Set up monitoring and alerting', 'Configure proper error handling', 'Remove any hardcoded test values', ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
                   <div className="h-5 w-5 rounded border border-white/20 flex items-center justify-center">
                     <span className="text-xs text-gray-500">{i + 1}</span>

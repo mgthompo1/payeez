@@ -1,7 +1,7 @@
 /**
  * Health Check Endpoint
  *
- * This endpoint provides health status for the Payeez platform.
+ * This endpoint provides health status for the Atlas platform.
  * It's used by:
  * - Load balancers for routing decisions
  * - SDK circuit breakers for failover logic
@@ -158,7 +158,7 @@ serve(async (req) => {
       const supabase = createClient(supabaseUrl, supabaseKey);
 
       await supabase.rpc('record_health_check', {
-        p_service_name: 'payeez_api',
+        p_service_name: 'atlas_api',
         p_region: response.region,
         p_status: response.status,
         p_latency_ms: Date.now() - requestStart,
