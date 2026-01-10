@@ -18,7 +18,6 @@ import {
   Receipt,
   Search,
   Landmark,
-  FlaskConical
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -64,7 +63,6 @@ const navigationSections: NavSection[] = [
   {
     title: 'Developers',
     items: [
-      { name: 'Playground', href: '/dashboard/playground', icon: FlaskConical },
       { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
       { name: 'Docs', href: '/dashboard/docs', icon: BookOpen },
     ]

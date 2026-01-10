@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition, Suspense } from 'react'
+import { useState, useEffect, useTransition, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -236,12 +236,24 @@ function GeneralSettingsTab() {
 }
 
 // ===== TEST PAYMENTS TAB =====
+// Read ELEMENTS_URL with fallback - must be set in env for production
 const ELEMENTS_URL = process.env.NEXT_PUBLIC_ELEMENTS_URL || 'http://localhost:3001'
+
+// Helper to safely get localStorage value (handles SSR)
+function getStoredApiKey(): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    return localStorage.getItem('atlas_test_api_key') || ''
+  } catch {
+    return ''
+  }
+}
 
 function TestPaymentsTab() {
   const [psps, setPsps] = useState<Array<{ psp: string; environment: string }>>([])
   const [selectedPsp, setSelectedPsp] = useState('')
-  const [apiKey, setApiKey] = useState('')
+  // Initialize from localStorage immediately to avoid flash
+  const [apiKey, setApiKey] = useState(() => getStoredApiKey())
   const [amount, setAmount] = useState('10.00')
   const [currency, setCurrency] = useState('NZD')
   const [step, setStep] = useState(1)
@@ -251,6 +263,13 @@ function TestPaymentsTab() {
   const [error, setError] = useState('')
   const [result, setResult] = useState<any>(null)
   const [logs, setLogs] = useState<string[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  // Refs to avoid stale closures in event handlers
+  const stateRef = useRef({ sessionId: '', clientSecret: '', selectedPsp: '' })
+  useEffect(() => {
+    stateRef.current = { sessionId, clientSecret, selectedPsp }
+  }, [sessionId, clientSecret, selectedPsp])
 
   const functionsUrl = `${SUPABASE_URL}/functions/v1`
 
@@ -258,20 +277,26 @@ function TestPaymentsTab() {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`])
   }
 
-  // Persist API key to localStorage
+  // Mark as mounted and sync localStorage on client
   useEffect(() => {
+    setMounted(true)
+    // Re-read from localStorage after hydration to ensure sync
     const savedKey = localStorage.getItem('atlas_test_api_key')
-    if (savedKey) {
+    if (savedKey && savedKey !== apiKey) {
       setApiKey(savedKey)
     }
   }, [])
 
   const handleApiKeyChange = (value: string) => {
     setApiKey(value)
-    if (value) {
-      localStorage.setItem('atlas_test_api_key', value)
-    } else {
-      localStorage.removeItem('atlas_test_api_key')
+    try {
+      if (value) {
+        localStorage.setItem('atlas_test_api_key', value)
+      } else {
+        localStorage.removeItem('atlas_test_api_key')
+      }
+    } catch (e) {
+      console.warn('Failed to save API key to localStorage:', e)
     }
   }
 
@@ -350,6 +375,9 @@ function TestPaymentsTab() {
   // Listen for iframe messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from the elements app
+      if (event.origin !== ELEMENTS_URL.replace(/\/$/, '')) return
+
       const { type, payload } = event.data || {}
 
       switch (type) {
@@ -363,7 +391,8 @@ function TestPaymentsTab() {
           break
         case 'ATLAS_TOKEN_CREATED':
           addLog(`Token created: ${payload?.tokenId}`)
-          confirmPayment(payload?.tokenId)
+          // Call confirm inline to avoid stale closure
+          handleTokenCreated(payload?.tokenId)
           break
         case 'ATLAS_ERROR':
           addLog(`Form error: ${payload?.message}`)
@@ -374,25 +403,28 @@ function TestPaymentsTab() {
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [sessionId, clientSecret, selectedPsp])
+  }, [])
 
-  // Confirm payment
-  const confirmPayment = async (tokenId: string) => {
-    addLog(`Confirming payment with ${selectedPsp}...`)
+  // Handle token creation using ref to avoid stale closure
+  const handleTokenCreated = async (tokenId: string) => {
+    const { sessionId: sid, clientSecret: cs, selectedPsp: psp } = stateRef.current
+    if (!sid || !cs || !psp) return
+
+    addLog(`Confirming payment with ${psp}...`)
     setLoading(true)
 
     try {
-      const res = await fetch(`${functionsUrl}/confirm-payment/${sessionId}`, {
+      const res = await fetch(`${functionsUrl}/confirm-payment/${sid}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${clientSecret}`,
+          'Authorization': `Bearer ${cs}`,
         },
         body: JSON.stringify({
-          session_id: sessionId,
+          session_id: sid,
           token_id: tokenId,
           token_provider: 'atlas',
-          psp: selectedPsp, // Force specific PSP
+          psp: psp,
         }),
       })
 
@@ -547,7 +579,7 @@ function TestPaymentsTab() {
             <div className="rounded-lg overflow-hidden border border-white/10 mb-4 bg-white">
               <iframe
                 src={`${ELEMENTS_URL}?sessionId=${sessionId}&parentOrigin=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
-                className="w-full h-[320px] border-0"
+                className="w-full h-[520px] border-0"
                 title="Payment form"
                 allow="payment"
               />

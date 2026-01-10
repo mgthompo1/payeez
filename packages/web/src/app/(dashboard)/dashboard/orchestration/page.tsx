@@ -71,6 +71,7 @@ interface OrchestrationProfile {
   tenant_id: string
   name: string
   description: string | null
+  environment: string
   is_active: boolean
   is_default: boolean
 }
@@ -99,63 +100,86 @@ export default function OrchestrationPage() {
   }, [])
 
   async function loadOrchestration() {
-    const { data: profiles } = await supabase
-      .from('orchestration_profiles')
-      .select('*')
-      .eq('is_default', true)
-      .limit(1)
-      .single()
+    try {
+      // First get the user's tenant ID
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-    let currentProfile = profiles
-
-    if (!currentProfile) {
-      const { data: newProfile } = await supabase
-        .from('orchestration_profiles')
-        .insert({
-          name: 'Default Profile',
-          environment: 'test',
-          is_active: true,
-          is_default: true,
-        })
-        .select()
+      // Get the tenant ID from memberships
+      const { data: membership } = await supabase
+        .from('memberships')
+        .select('tenant_id')
+        .limit(1)
         .single()
-      currentProfile = newProfile
+
+      if (!membership) return
+
+      const tenantId = membership.tenant_id
+
+      const { data: profiles } = await supabase
+        .from('orchestration_profiles')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('is_default', true)
+        .limit(1)
+        .single()
+
+      let currentProfile = profiles
+
+      if (!currentProfile) {
+        const { data: newProfile } = await supabase
+          .from('orchestration_profiles')
+          .insert({
+            tenant_id: tenantId,
+            name: 'Default Profile',
+            environment: 'test',
+            is_active: true,
+            is_default: true,
+          })
+          .select()
+          .single()
+
+        currentProfile = newProfile
+      }
+
+      if (currentProfile) {
+        setProfile(currentProfile)
+
+        // Fetch all rules in parallel instead of sequentially
+        const [trafficResult, retriesResult, prioritiesResult] = await Promise.all([
+          supabase
+            .from('traffic_split_rules')
+            .select('*')
+            .eq('profile_id', currentProfile.id)
+            .order('weight', { ascending: false }),
+          supabase
+            .from('retry_rules')
+            .select('*')
+            .eq('profile_id', currentProfile.id)
+            .order('source_psp', { ascending: true }),
+          supabase
+            .from('psp_priorities')
+            .select('*')
+            .eq('profile_id', currentProfile.id)
+            .order('priority', { ascending: true }),
+        ])
+
+        setTrafficRules(trafficResult.data || [])
+        setRetryRules(retriesResult.data || [])
+        setPspPriorities(prioritiesResult.data || [])
+      }
+    } catch (err) {
+      console.error('loadOrchestration: Unexpected error', err)
+    } finally {
+      setLoading(false)
     }
-
-    if (currentProfile) {
-      setProfile(currentProfile)
-
-      // Fetch all rules in parallel instead of sequentially
-      const [trafficResult, retriesResult, prioritiesResult] = await Promise.all([
-        supabase
-          .from('traffic_split_rules')
-          .select('*')
-          .eq('profile_id', currentProfile.id)
-          .order('weight', { ascending: false }),
-        supabase
-          .from('retry_rules')
-          .select('*')
-          .eq('profile_id', currentProfile.id)
-          .order('source_psp', { ascending: true }),
-        supabase
-          .from('psp_priorities')
-          .select('*')
-          .eq('profile_id', currentProfile.id)
-          .order('priority', { ascending: true }),
-      ])
-
-      setTrafficRules(trafficResult.data || [])
-      setRetryRules(retriesResult.data || [])
-      setPspPriorities(prioritiesResult.data || [])
-    }
-
-    setLoading(false)
   }
 
   async function addTrafficRule() {
     if (!profile || !newTrafficRule.psp) return
     await supabase.from('traffic_split_rules').insert({
       profile_id: profile.id,
+      tenant_id: profile.tenant_id,
       psp: newTrafficRule.psp,
       weight: newTrafficRule.weight,
       is_active: true,
@@ -184,6 +208,7 @@ export default function OrchestrationPage() {
     if (!profile || !newRetryRule.source_psp || !newRetryRule.target_psp) return
     await supabase.from('retry_rules').insert({
       profile_id: profile.id,
+      tenant_id: profile.tenant_id,
       source_psp: newRetryRule.source_psp,
       target_psp: newRetryRule.target_psp,
       failure_codes: newRetryRule.failure_codes.length > 0 ? newRetryRule.failure_codes : null,
@@ -312,7 +337,13 @@ export default function OrchestrationPage() {
                     <Button variant="outline" onClick={() => setShowTrafficDialog(false)} className="border-white/10 text-slate-300 hover:bg-white/5 rounded-full px-6">
                       Cancel
                     </Button>
-                    <Button onClick={addTrafficRule} className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-full px-8">Add Rule</Button>
+                    <Button
+                      onClick={addTrafficRule}
+                      disabled={!newTrafficRule.psp}
+                      className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-full px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Rule
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -494,7 +525,13 @@ export default function OrchestrationPage() {
                     <Button variant="outline" onClick={() => setShowRetryDialog(false)} className="border-white/10 text-slate-300 hover:bg-white/5 rounded-full px-6">
                       Cancel
                     </Button>
-                    <Button onClick={addRetryRule} className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-full px-8">Add Rule</Button>
+                    <Button
+                      onClick={addRetryRule}
+                      disabled={!newRetryRule.source_psp || !newRetryRule.target_psp}
+                      className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-full px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Rule
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
