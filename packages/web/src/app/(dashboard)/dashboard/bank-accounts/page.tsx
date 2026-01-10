@@ -19,7 +19,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Label } from '@/components/ui/label'
-import { Landmark, Plus, Search, Copy, Check, Building, ArrowUpRight, ArrowDownLeft, AlertTriangle } from 'lucide-react'
+import { Landmark, Plus, Search, Copy, Check, Building, ArrowUpRight, ArrowDownLeft, AlertTriangle, Loader2 } from 'lucide-react'
 import { BankAccountForm } from '@/components/bank/BankAccountForm'
 import { MicrodepositVerification } from '@/components/bank/MicrodepositVerification'
 

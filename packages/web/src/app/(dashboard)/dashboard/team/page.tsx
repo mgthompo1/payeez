@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { MailPlus, Shield, Users } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import { MailPlus, Shield, Users, X } from 'lucide-react'
 import { createInvite, updateMemberRole, removeMember, revokeInvite } from './actions'
 
 export default async function TeamPage() {

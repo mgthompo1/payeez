@@ -168,7 +168,7 @@ export default function HomePage() {
                   <div className="font-mono text-xs space-y-2">
                     <div className="flex text-white/40"><span className="w-6 select-none">01</span> <span className="text-cyan-400">const</span> <span className="text-white">vault</span> = <span className="text-cyan-400">new</span> Atlas.<span className="text-yellow-200">Vault</span>();</div>
                     <div className="flex text-white/40"><span className="w-6 select-none">02</span></div>
-                    <div className="flex text-white/40"><span className="w-6 select-none">03</span> <span className="text-white/60">// Tokenizing sensitive payload</span></div>
+                    <div className="flex text-white/40"><span className="w-6 select-none">03</span> <span className="text-white/60">{"// Tokenizing sensitive payload"}</span></div>
                     <div className="flex text-white/40"><span className="w-6 select-none">04</span> <span className="text-cyan-400">const</span> <span className="text-white">token</span> = <span className="text-cyan-400">await</span> vault.<span className="text-blue-400">encrypt</span>{'{'}</div>
                     <div className="flex text-white/40"><span className="w-6 select-none">05</span>   <span className="text-white">pan:</span> <span className="text-emerald-400">"4242-4242-4242-4242"</span>,</div>
                     <div className="flex text-white/40"><span className="w-6 select-none">06</span>   <span className="text-white">cvc:</span> <span className="text-emerald-400">"***"</span></div>

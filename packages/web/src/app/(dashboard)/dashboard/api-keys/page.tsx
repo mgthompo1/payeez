@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Copy, Eye, EyeOff, Trash2, Key, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { Plus, Copy, Eye, EyeOff, Trash2, Key, AlertTriangle, Loader2, RefreshCw, Check } from 'lucide-react'
 import { getApiKeys, createApiKey, revokeApiKey, onboardUser, type ApiKey, type CreateKeyResult } from './actions'
 
 export default function ApiKeysPage() {

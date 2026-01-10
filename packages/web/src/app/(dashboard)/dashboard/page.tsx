@@ -152,7 +152,7 @@ export default async function DashboardPage() {
               ) : (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                    // No transactions found in the logs...
+                    No transactions found
                   </td>
                 </tr>
               )}
