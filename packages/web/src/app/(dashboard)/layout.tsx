@@ -83,12 +83,15 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use getSession() instead of getUser() - middleware already validated auth
+  // getSession() reads from cookie (fast), getUser() always hits Supabase (slow)
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user) {
+  if (!session?.user) {
     redirect('/login')
   }
 
+  const user = session.user
   const initials = user.email?.slice(0, 2).toUpperCase() || 'U'
 
   return (

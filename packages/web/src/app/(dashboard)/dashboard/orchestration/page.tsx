@@ -125,29 +125,28 @@ export default function OrchestrationPage() {
     if (currentProfile) {
       setProfile(currentProfile)
 
-      const { data: traffic } = await supabase
-        .from('traffic_split_rules')
-        .select('*')
-        .eq('profile_id', currentProfile.id)
-        .order('weight', { ascending: false })
+      // Fetch all rules in parallel instead of sequentially
+      const [trafficResult, retriesResult, prioritiesResult] = await Promise.all([
+        supabase
+          .from('traffic_split_rules')
+          .select('*')
+          .eq('profile_id', currentProfile.id)
+          .order('weight', { ascending: false }),
+        supabase
+          .from('retry_rules')
+          .select('*')
+          .eq('profile_id', currentProfile.id)
+          .order('source_psp', { ascending: true }),
+        supabase
+          .from('psp_priorities')
+          .select('*')
+          .eq('profile_id', currentProfile.id)
+          .order('priority', { ascending: true }),
+      ])
 
-      setTrafficRules(traffic || [])
-
-      const { data: retries } = await supabase
-        .from('retry_rules')
-        .select('*')
-        .eq('profile_id', currentProfile.id)
-        .order('source_psp', { ascending: true })
-
-      setRetryRules(retries || [])
-
-      const { data: priorities } = await supabase
-        .from('psp_priorities')
-        .select('*')
-        .eq('profile_id', currentProfile.id)
-        .order('priority', { ascending: true })
-
-      setPspPriorities(priorities || [])
+      setTrafficRules(trafficResult.data || [])
+      setRetryRules(retriesResult.data || [])
+      setPspPriorities(prioritiesResult.data || [])
     }
 
     setLoading(false)

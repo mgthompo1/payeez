@@ -18,9 +18,6 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Atlas",
   description: "The Payment Vault for Global Scale. Secure infrastructure for orchestration.",
-  icons: {
-    icon: "/brand/atlas-mark.svg",
-  },
 };
 
 export default function RootLayout({

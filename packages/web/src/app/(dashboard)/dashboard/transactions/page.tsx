@@ -50,6 +50,9 @@ export default function TransactionsPage() {
   const [selectedTx, setSelectedTx] = useState<any>(null)
   const [copied, setCopied] = useState<string | null>(null)
 
+  // Create client once at component level, not per-request
+  const supabase = createClient()
+
   useEffect(() => {
     const preset = datePresets.find(p => p.label === datePreset)
     if (preset && datePreset !== 'Custom') {
@@ -84,7 +87,6 @@ export default function TransactionsPage() {
 
   const searchTransactions = async () => {
     setLoading(true)
-    const supabase = createClient()
 
     let query = supabase
       .from('payment_attempts')
