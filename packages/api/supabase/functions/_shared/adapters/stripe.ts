@@ -13,8 +13,16 @@ export interface AuthorizeRequest {
     account_holder_name?: string;
     account_type?: 'checking' | 'savings';
   };
+  // Atlas vault card data (decrypted from vault)
+  cardData?: {
+    cardNumber: string;
+    cardHolderName: string;
+    expiryMonth: string;
+    expiryYear: string;
+    cvc: string;
+  };
   // VGS support
-  tokenProvider?: 'basis_theory' | 'vgs';
+  tokenProvider?: 'basis_theory' | 'vgs' | 'atlas';
   vgsConfig?: {
     vaultId: string;
     credentials: string;
@@ -43,7 +51,10 @@ export interface AuthorizeResponse {
 
 /**
  * Stripe PSP Adapter
- * Uses Basis Theory proxy to forward card data
+ * Supports multiple vault providers:
+ * - Atlas vault: Direct card data from vault
+ * - Basis Theory: Token proxy
+ * - VGS: Proxy through VGS vault
  */
 export const stripeAdapter = {
   name: 'stripe' as const,
@@ -53,13 +64,39 @@ export const stripeAdapter = {
     credentials: { secret_key: string },
     vaultApiKey: string
   ): Promise<AuthorizeResponse> {
-    let proxyResponse: Response;
+    const stripe = new Stripe(credentials.secret_key, {
+      apiVersion: '2023-10-16',
+    });
 
-    // Use appropriate vault proxy based on token provider
-    if (req.tokenProvider === 'vgs' && req.vgsConfig && req.vgsData) {
+    let paymentMethod: any;
+
+    // Use appropriate method based on token provider
+    if (req.cardData) {
+      // Atlas vault - card data already decrypted, create payment method directly
+      try {
+        paymentMethod = await stripe.paymentMethods.create({
+          type: 'card',
+          card: {
+            number: req.cardData.cardNumber,
+            exp_month: parseInt(req.cardData.expiryMonth, 10),
+            exp_year: parseInt(req.cardData.expiryYear, 10),
+            cvc: req.cardData.cvc,
+          },
+        });
+      } catch (error: any) {
+        return {
+          success: false,
+          transactionId: '',
+          status: 'failed',
+          failureCode: error.code || 'card_error',
+          failureMessage: error.message || 'Failed to create payment method',
+          rawResponse: error,
+        };
+      }
+    } else if (req.tokenProvider === 'vgs' && req.vgsConfig && req.vgsData) {
       // VGS proxy - forwards through VGS to reveal card data
       const vgsBaseUrl = `https://${req.vgsConfig.vaultId}.sandbox.verygoodproxy.com`;
-      proxyResponse = await fetch(`${vgsBaseUrl}/proxy`, {
+      const proxyResponse = await fetch(`${vgsBaseUrl}/proxy`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${req.vgsConfig.credentials}`,
@@ -75,9 +112,23 @@ export const stripeAdapter = {
           'card[cvc]': req.vgsData.card_cvc,
         }),
       });
+
+      if (!proxyResponse.ok) {
+        const error = await proxyResponse.json();
+        return {
+          success: false,
+          transactionId: '',
+          status: 'failed',
+          failureCode: error.error?.code || 'proxy_error',
+          failureMessage: error.error?.message || 'Failed to create payment method',
+          rawResponse: error,
+        };
+      }
+
+      paymentMethod = await proxyResponse.json();
     } else {
       // Basis Theory proxy - default
-      proxyResponse = await fetch('https://api.basistheory.com/proxy', {
+      const proxyResponse = await fetch('https://api.basistheory.com/proxy', {
         method: 'POST',
         headers: {
           'BT-API-KEY': vaultApiKey,
@@ -89,26 +140,23 @@ export const stripeAdapter = {
           'card[token]': `{{${req.tokenId}}}`, // BT token interpolation
         }),
       });
-    }
 
-    if (!proxyResponse.ok) {
-      const error = await proxyResponse.json();
-      return {
-        success: false,
-        transactionId: '',
-        status: 'failed',
-        failureCode: error.error?.code || 'proxy_error',
-        failureMessage: error.error?.message || 'Failed to create payment method',
-        rawResponse: error,
-      };
-    }
+      if (!proxyResponse.ok) {
+        const error = await proxyResponse.json();
+        return {
+          success: false,
+          transactionId: '',
+          status: 'failed',
+          failureCode: error.error?.code || 'proxy_error',
+          failureMessage: error.error?.message || 'Failed to create payment method',
+          rawResponse: error,
+        };
+      }
 
-    const paymentMethod = await proxyResponse.json();
+      paymentMethod = await proxyResponse.json();
+    }
 
     // Now create and confirm PaymentIntent with the payment method
-    const stripe = new Stripe(credentials.secret_key, {
-      apiVersion: '2023-10-16',
-    });
 
     try {
       const paymentIntent = await stripe.paymentIntents.create(

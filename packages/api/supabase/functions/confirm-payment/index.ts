@@ -493,8 +493,9 @@ serve(async (req) => {
         // For PSPs that need raw card data (not token-based), retrieve from Atlas vault
         // - Windcave: Uses direct card data
         // - PayPal: Uses card data for Advanced Card Processing (requires PCI SAQ D)
+        // - Stripe: Can use card data directly when Atlas vault is the token provider
         let cardData = null;
-        const pspsNeedingCardData = ['windcave', 'paypal'];
+        const pspsNeedingCardData = ['windcave', 'paypal', 'stripe'];
         if (pspsNeedingCardData.includes(decision.psp) && tokenProvider === 'atlas') {
           const decryptedCard = await getCardDataFromVault(vaultTokenId, sessionId);
           if (!decryptedCard) {

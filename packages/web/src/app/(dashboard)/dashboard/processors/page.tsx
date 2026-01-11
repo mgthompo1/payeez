@@ -177,7 +177,6 @@ interface PSPCredential {
 }
 
 export default function ProcessorsPage() {
-  const supabase = createClient()
   const [credentials, setCredentials] = useState<PSPCredential[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -191,6 +190,7 @@ export default function ProcessorsPage() {
 
   const loadCredentials = async () => {
     setLoading(true)
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('psp_credentials')
       .select('id, psp, environment, is_active, created_at, updated_at')
@@ -217,35 +217,36 @@ export default function ProcessorsPage() {
     }
 
     startTransition(async () => {
-      try {
-        if (editingCredentialId) {
-          await createPspCredential({
+      const result = editingCredentialId
+        ? await createPspCredential({
             id: editingCredentialId,
             psp: selectedPSP.name,
             environment,
             credentials: formData,
           })
-        } else {
-          await createPspCredential({
+        : await createPspCredential({
             psp: selectedPSP.name,
             environment,
             credentials: formData,
           })
-        }
-        setShowAddDialog(false)
-        setSelectedPSP(null)
-        setFormData({})
-        setEnvironment('test')
-        setEditingCredentialId(null)
-        await loadCredentials()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save credential')
+
+      if (!result.success) {
+        setError(result.error || 'Failed to save credential')
+        return
       }
+
+      setShowAddDialog(false)
+      setSelectedPSP(null)
+      setFormData({})
+      setEnvironment('test')
+      setEditingCredentialId(null)
+      await loadCredentials()
     })
   }
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     startTransition(async () => {
+      const supabase = createClient()
       await supabase.from('psp_credentials').update({ is_active: isActive }).eq('id', id)
       await loadCredentials()
     })
@@ -254,6 +255,7 @@ export default function ProcessorsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this processor credential?')) return
     startTransition(async () => {
+      const supabase = createClient()
       await supabase.from('psp_credentials').delete().eq('id', id)
       await loadCredentials()
     })
@@ -482,20 +484,14 @@ export default function ProcessorsPage() {
                   <Label className="text-slate-300">Environment</Label>
                   <Select value={environment} onValueChange={(v) => setEnvironment(v as 'test' | 'live')}>
                     <SelectTrigger className="bg-obsidian border-white/10 text-white focus:border-cyan-400">
-                      <SelectValue />
+                      <SelectValue placeholder="Select environment" />
                     </SelectTrigger>
                     <SelectContent className="bg-charcoal border-white/10">
                       <SelectItem value="test" className="text-white hover:bg-white/5">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20">Test</Badge>
-                          <span className="text-slate-300">Sandbox / Development</span>
-                        </div>
+                        Test - Sandbox / Development
                       </SelectItem>
                       <SelectItem value="live" className="text-white hover:bg-white/5">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Live</Badge>
-                          <span className="text-slate-300">Production</span>
-                        </div>
+                        Live - Production
                       </SelectItem>
                     </SelectContent>
                   </Select>
