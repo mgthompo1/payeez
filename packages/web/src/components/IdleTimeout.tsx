@@ -18,9 +18,9 @@ export function IdleTimeout({
   const [countdown, setCountdown] = useState(0)
   const router = useRouter()
   const lastActivityRef = useRef(Date.now())
-  const warningTimeoutRef = useRef<NodeJS.Timeout>()
-  const logoutTimeoutRef = useRef<NodeJS.Timeout>()
-  const countdownIntervalRef = useRef<NodeJS.Timeout>()
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const logout = useCallback(async () => {
     // Submit logout form
@@ -50,7 +50,9 @@ export function IdleTimeout({
       countdownIntervalRef.current = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
-            clearInterval(countdownIntervalRef.current)
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current)
+            }
             return 0
           }
           return prev - 1
