@@ -29,6 +29,7 @@ import {
   sendTrialEndingEmail,
   sendSubscriptionCanceledEmail,
 } from '../_shared/email.ts';
+import { chargeToken } from '../_shared/payment-processor.ts';
 
 interface BillingJob {
   id: string;
@@ -288,11 +289,21 @@ serve(async (req) => {
           continue;
         }
 
-        // In a real implementation, this would call the payment orchestrator
-        // For now, we'll simulate a successful charge
-        const chargeSuccess = true; // Simulated
+        // Charge the invoice using the real payment orchestrator
+        const chargeResult = await chargeToken(supabase, {
+          tenantId: invoice.tenant_id,
+          tokenId: tokenId,
+          amount: invoice.total,
+          currency: invoice.currency,
+          customerEmail: invoice.customers?.email,
+          customerName: invoice.customers?.name,
+          description: `Invoice ${invoice.number || invoice.id}`,
+          invoiceId: invoice.id,
+          subscriptionId: invoice.subscription_id,
+          idempotencyKey: `invoice_${invoice.id}_${Date.now()}`,
+        });
 
-        if (chargeSuccess) {
+        if (chargeResult.success) {
           const paidAt = new Date().toISOString();
           await supabase
             .from('invoices')
@@ -301,6 +312,14 @@ serve(async (req) => {
               paid_at: paidAt,
             })
             .eq('id', invoice.id);
+
+          console.log(`[BillingEngine] Invoice ${invoice.id} charged successfully:`, {
+            psp: chargeResult.psp,
+            transactionId: chargeResult.transactionId,
+            amount: invoice.total,
+            currency: invoice.currency,
+            attempts: chargeResult.attempts,
+          });
 
           // Send payment receipt email
           if (invoice.customers?.email) {
@@ -363,20 +382,28 @@ serve(async (req) => {
             status: 'pending',
           });
 
-          // Send payment failed email
+          // Send payment failed email with actual failure reason
           const webUrl = Deno.env.get('PUBLIC_WEB_URL') || 'https://atlas.io';
+          const failureReason = chargeResult.failureMessage || chargeResult.failureCode || 'Your payment method was declined';
           if (invoice.customers?.email) {
             await sendPaymentFailedEmail({
               customerEmail: invoice.customers.email,
               customerName: invoice.customers.name,
               amount: invoice.total || 0,
               currency: invoice.currency || 'usd',
-              reason: 'Your payment method was declined',
+              reason: failureReason,
               retryDate: retryDate.toISOString(),
-              updatePaymentUrl: `${webUrl}/portal/${invoice.tenant_id}`, // Would need portal session
+              updatePaymentUrl: `${webUrl}/portal/${invoice.tenant_id}`,
               merchantName: invoice.tenants?.name || 'Merchant',
             });
           }
+
+          console.log(`[BillingEngine] Invoice ${invoice.id} charge failed:`, {
+            psp: chargeResult.psp,
+            code: chargeResult.failureCode,
+            message: chargeResult.failureMessage,
+            attempts: chargeResult.attempts,
+          });
 
           invoicesFailed++;
         }
@@ -410,7 +437,7 @@ serve(async (req) => {
           .from('invoices')
           .select(`
             *,
-            customers (default_token_id),
+            customers (id, email, name, default_token_id),
             subscriptions (default_token_id)
           `)
           .eq('id', job.target_id)
@@ -424,10 +451,37 @@ serve(async (req) => {
           continue;
         }
 
-        // Simulate charge attempt
-        const chargeSuccess = Math.random() > 0.3; // 70% success rate for demo
+        // Get the token ID for the retry
+        const tokenId = invoice.subscriptions?.default_token_id || invoice.customers?.default_token_id;
 
-        if (chargeSuccess) {
+        if (!tokenId) {
+          // No payment method, mark job as failed
+          await supabase
+            .from('billing_jobs')
+            .update({
+              status: 'failed',
+              attempts: job.attempts + 1,
+              last_error: 'No payment method available',
+            })
+            .eq('id', job.id);
+          continue;
+        }
+
+        // Retry charge using the real payment orchestrator
+        const chargeResult = await chargeToken(supabase, {
+          tenantId: invoice.tenant_id,
+          tokenId: tokenId,
+          amount: invoice.total,
+          currency: invoice.currency,
+          customerEmail: invoice.customers?.email,
+          customerName: invoice.customers?.name,
+          description: `Invoice ${invoice.number || invoice.id} (retry ${job.attempts + 1})`,
+          invoiceId: invoice.id,
+          subscriptionId: invoice.subscription_id,
+          idempotencyKey: `invoice_retry_${invoice.id}_${job.attempts + 1}_${Date.now()}`,
+        });
+
+        if (chargeResult.success) {
           await supabase
             .from('invoices')
             .update({
@@ -452,6 +506,7 @@ serve(async (req) => {
           retriesSucceeded++;
         } else {
           const attempts = job.attempts + 1;
+          const failureReason = chargeResult.failureMessage || chargeResult.failureCode || 'Payment failed';
 
           if (attempts >= DEFAULT_RETRY_SCHEDULE.length) {
             // Max retries reached, mark as uncollectible
@@ -465,7 +520,7 @@ serve(async (req) => {
               .update({
                 status: 'failed',
                 attempts,
-                last_error: 'Max retries exceeded',
+                last_error: `Max retries exceeded: ${failureReason}`,
               })
               .eq('id', job.id);
 
@@ -491,7 +546,7 @@ serve(async (req) => {
                 status: 'pending',
                 attempts,
                 scheduled_for: nextRetryDate.toISOString(),
-                last_error: 'Payment failed, will retry',
+                last_error: failureReason,
               })
               .eq('id', job.id);
           }
