@@ -1,8 +1,13 @@
 /**
  * Process ACH Transfers
  *
- * Scheduled function that processes pending bank transfers via Stripe ACH.
+ * Scheduled function that processes pending bank transfers via ACH adapters.
  * Should be called via cron every 5 minutes.
+ *
+ * Uses the multi-rail ACH orchestrator to:
+ * - Select the best provider (Stripe, Moov, NACHA, etc.)
+ * - Create audit trail via bank_transfer_attempts
+ * - Handle failures and retries
  *
  * Routes:
  *   POST /process-ach-transfers/run     - Process all pending transfers
@@ -13,9 +18,16 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createHash, createDecipheriv } from 'node:crypto';
 import { buildCorsHeaders } from '../_shared/auth.ts';
+import { decryptJson } from '../_shared/crypto.ts';
+import {
+  executeACHDebit,
+  executeACHCredit,
+  type ACHSettlementRequest,
+  type ACHProviderName,
+} from '../_shared/ach/index.ts';
 
 // ============================================
-// Vault Functions
+// Vault Functions (for bank account data)
 // ============================================
 
 function getEncryptionKey(): Uint8Array {
@@ -45,194 +57,6 @@ function decryptBankData(vaultToken: string): {
   decrypted += decipher.final('utf8');
 
   return JSON.parse(decrypted);
-}
-
-// ============================================
-// Stripe ACH Processing
-// ============================================
-
-interface StripeACHResult {
-  success: boolean;
-  chargeId?: string;
-  payoutId?: string;
-  error?: string;
-  errorCode?: string;
-}
-
-async function processStripeACHDebit(
-  stripeSecretKey: string,
-  bankAccount: {
-    account_number: string;
-    routing_number: string;
-    holder_name: string;
-    account_type: string;
-  },
-  amount: number,
-  currency: string,
-  description: string,
-  idempotencyKey: string
-): Promise<StripeACHResult> {
-  try {
-    // Step 1: Create a bank account token
-    const tokenResponse = await fetch('https://api.stripe.com/v1/tokens', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Idempotency-Key': `${idempotencyKey}_token`,
-      },
-      body: new URLSearchParams({
-        'bank_account[country]': 'US',
-        'bank_account[currency]': currency.toLowerCase(),
-        'bank_account[account_holder_name]': bankAccount.holder_name,
-        'bank_account[account_holder_type]': 'individual',
-        'bank_account[routing_number]': bankAccount.routing_number,
-        'bank_account[account_number]': bankAccount.account_number,
-      }),
-    });
-
-    const tokenData = await tokenResponse.json();
-
-    if (tokenData.error) {
-      return {
-        success: false,
-        error: tokenData.error.message,
-        errorCode: tokenData.error.code,
-      };
-    }
-
-    // Step 2: Create a charge using the bank account token
-    const chargeResponse = await fetch('https://api.stripe.com/v1/charges', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Idempotency-Key': `${idempotencyKey}_charge`,
-      },
-      body: new URLSearchParams({
-        'amount': amount.toString(),
-        'currency': currency.toLowerCase(),
-        'source': tokenData.id,
-        'description': description,
-      }),
-    });
-
-    const chargeData = await chargeResponse.json();
-
-    if (chargeData.error) {
-      return {
-        success: false,
-        error: chargeData.error.message,
-        errorCode: chargeData.error.code,
-      };
-    }
-
-    return {
-      success: true,
-      chargeId: chargeData.id,
-    };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Unknown error',
-      errorCode: 'processing_error',
-    };
-  }
-}
-
-async function processStripeACHCredit(
-  stripeSecretKey: string,
-  bankAccount: {
-    account_number: string;
-    routing_number: string;
-    holder_name: string;
-    account_type: string;
-  },
-  amount: number,
-  currency: string,
-  description: string,
-  idempotencyKey: string
-): Promise<StripeACHResult> {
-  try {
-    // For credits (payouts), we need to use Stripe Connect or create an external account
-    // This is a simplified version - in production you'd use Stripe Connect
-
-    // Step 1: Create or get a connected account for the recipient
-    // For now, we'll create a payout to an external account
-
-    // Create external account on the platform
-    const externalAccountResponse = await fetch(
-      'https://api.stripe.com/v1/accounts/self/external_accounts',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Idempotency-Key': `${idempotencyKey}_ext_account`,
-        },
-        body: new URLSearchParams({
-          'external_account[object]': 'bank_account',
-          'external_account[country]': 'US',
-          'external_account[currency]': currency.toLowerCase(),
-          'external_account[account_holder_name]': bankAccount.holder_name,
-          'external_account[account_holder_type]': 'individual',
-          'external_account[routing_number]': bankAccount.routing_number,
-          'external_account[account_number]': bankAccount.account_number,
-        }),
-      }
-    );
-
-    const externalAccountData = await externalAccountResponse.json();
-
-    if (externalAccountData.error) {
-      // If account already exists, that's fine
-      if (externalAccountData.error.code !== 'bank_account_exists') {
-        return {
-          success: false,
-          error: externalAccountData.error.message,
-          errorCode: externalAccountData.error.code,
-        };
-      }
-    }
-
-    // Step 2: Create a payout
-    const payoutResponse = await fetch('https://api.stripe.com/v1/payouts', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Idempotency-Key': `${idempotencyKey}_payout`,
-      },
-      body: new URLSearchParams({
-        'amount': amount.toString(),
-        'currency': currency.toLowerCase(),
-        'destination': externalAccountData.id,
-        'description': description,
-        'method': 'standard', // or 'instant' for instant payouts
-      }),
-    });
-
-    const payoutData = await payoutResponse.json();
-
-    if (payoutData.error) {
-      return {
-        success: false,
-        error: payoutData.error.message,
-        errorCode: payoutData.error.code,
-      };
-    }
-
-    return {
-      success: true,
-      payoutId: payoutData.id,
-    };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Unknown error',
-      errorCode: 'processing_error',
-    };
-  }
 }
 
 // ============================================
@@ -272,10 +96,18 @@ serve(async (req) => {
           id,
           vault_token,
           tenant_id,
-          holder_name
+          holder_name,
+          account_type
+        ),
+        bank_mandates (
+          id,
+          authorization_text,
+          accepted_at,
+          ip_address,
+          user_agent
         )
       `)
-      .eq('settlement_provider', 'stripe_ach')
+      .in('settlement_provider', ['stripe_ach', 'moov', 'paypal_ach', 'nacha'])
       .eq('status', 'pending')
       .order('created_at', { ascending: true })
       .limit(50);
@@ -298,39 +130,47 @@ serve(async (req) => {
       results.processed++;
 
       try {
-        // Get Stripe credentials for this tenant
-        const { data: credentials } = await supabase
-          .from('psp_credentials')
-          .select('credentials_encrypted')
-          .eq('tenant_id', transfer.tenant_id)
-          .eq('psp', 'stripe')
-          .eq('is_active', true)
-          .single();
-
-        if (!credentials) {
-          results.failed++;
-          results.errors.push({
-            transferId: transfer.id,
-            error: 'Stripe credentials not configured',
-          });
-
-          await supabase
-            .from('bank_transfers')
-            .update({
-              status: 'failed',
-              failure_code: 'no_credentials',
-              failure_reason: 'Stripe credentials not configured',
-              failed_at: new Date().toISOString(),
-            })
-            .eq('id', transfer.id);
-
-          continue;
-        }
-
         // Decrypt bank account data
         const bankData = decryptBankData(transfer.bank_accounts.vault_token);
 
-        // Update to processing
+        // Get the current attempt number
+        const { count: existingAttempts } = await supabase
+          .from('bank_transfer_attempts')
+          .select('*', { count: 'exact', head: true })
+          .eq('transfer_id', transfer.id);
+
+        const attemptNumber = (existingAttempts || 0) + 1;
+        const idempotencyKey = `${transfer.id}_${attemptNumber}`;
+
+        // Create attempt record BEFORE processing
+        const { data: attempt, error: attemptError } = await supabase
+          .from('bank_transfer_attempts')
+          .insert({
+            transfer_id: transfer.id,
+            tenant_id: transfer.tenant_id,
+            mandate_id: transfer.mandate_id,
+            settlement_provider: transfer.settlement_provider,
+            attempt_number: attemptNumber,
+            idempotency_key: idempotencyKey,
+            amount: transfer.amount,
+            currency: transfer.currency,
+            direction: transfer.direction,
+            status: 'pending',
+          })
+          .select()
+          .single();
+
+        if (attemptError) {
+          console.error('[ProcessACH] Failed to create attempt:', attemptError);
+          results.failed++;
+          results.errors.push({
+            transferId: transfer.id,
+            error: 'Failed to create attempt record',
+          });
+          continue;
+        }
+
+        // Update transfer to processing
         await supabase
           .from('bank_transfers')
           .update({
@@ -339,65 +179,95 @@ serve(async (req) => {
           })
           .eq('id', transfer.id);
 
-        // Decrypt Stripe credentials
-        // Note: In production, use proper decryption
-        let stripeKey: string;
-        try {
-          const decrypted = JSON.parse(credentials.credentials_encrypted);
-          stripeKey = decrypted.secret_key;
-        } catch {
-          stripeKey = credentials.credentials_encrypted;
-        }
+        // Build the settlement request
+        const settlementRequest: ACHSettlementRequest = {
+          transferId: transfer.id,
+          bankAccount: {
+            accountNumber: bankData.account_number,
+            routingNumber: bankData.routing_number,
+            accountType: (bankData.account_type as 'checking' | 'savings') || 'checking',
+            accountHolderName: bankData.holder_name,
+            accountHolderType: 'individual', // Could be enhanced
+          },
+          amount: transfer.amount,
+          currency: transfer.currency,
+          direction: transfer.direction,
+          mandate: transfer.bank_mandates ? {
+            id: transfer.bank_mandates.id,
+            authorizationText: transfer.bank_mandates.authorization_text,
+            acceptedAt: transfer.bank_mandates.accepted_at,
+            ipAddress: transfer.bank_mandates.ip_address,
+          } : undefined,
+          idempotencyKey,
+          description: transfer.statement_descriptor || transfer.internal_description,
+          metadata: transfer.metadata,
+        };
 
-        // Process based on direction
-        let result: StripeACHResult;
-        const idempotencyKey = transfer.idempotency_key || `ach_${transfer.id}`;
+        // Execute through the ACH orchestrator
+        const { response, routing } = transfer.direction === 'debit'
+          ? await executeACHDebit(settlementRequest, transfer.tenant_id, supabase)
+          : await executeACHCredit(settlementRequest, transfer.tenant_id, supabase);
 
-        if (transfer.direction === 'debit') {
-          result = await processStripeACHDebit(
-            stripeKey,
-            bankData,
-            transfer.amount,
-            transfer.currency,
-            transfer.description || `ACH Debit ${transfer.id}`,
-            idempotencyKey
-          );
-        } else {
-          result = await processStripeACHCredit(
-            stripeKey,
-            bankData,
-            transfer.amount,
-            transfer.currency,
-            transfer.description || `ACH Credit ${transfer.id}`,
-            idempotencyKey
-          );
-        }
+        // Update the attempt with the result
+        await supabase
+          .from('bank_transfer_attempts')
+          .update({
+            status: response.status,
+            provider_reference: response.providerId,
+            estimated_settlement_at: response.estimatedSettlementAt,
+            failure_code: response.failureCode,
+            failure_message: response.failureMessage,
+            failure_category: response.failureCategory,
+            return_code: response.returnCode,
+            return_reason: response.returnReason,
+            raw_response: response.rawResponse,
+            submitted_at: new Date().toISOString(),
+          })
+          .eq('id', attempt.id);
 
-        if (result.success) {
-          // Calculate expected settlement (2-5 business days for ACH)
-          const expectedSettlement = new Date();
-          expectedSettlement.setDate(expectedSettlement.getDate() + 3);
+        // Record the routing decision
+        await supabase
+          .from('bank_transfer_events')
+          .insert({
+            tenant_id: transfer.tenant_id,
+            transfer_id: transfer.id,
+            attempt_id: attempt.id,
+            event_type: 'transfer.submitted',
+            provider: routing.provider,
+            payload: {
+              routing_strategy: routing.reason,
+              routing_factors: routing.factors,
+              alternatives: routing.alternativesConsidered,
+            },
+          });
 
+        if (response.success) {
+          // Update transfer with provider reference
           await supabase
             .from('bank_transfers')
             .update({
-              status: 'processing', // Will be 'settled' when webhook confirms
-              provider_transfer_id: result.chargeId || result.payoutId,
-              settlement_reference: result.chargeId || result.payoutId,
-              expected_settlement_at: expectedSettlement.toISOString(),
+              status: response.status === 'settled' ? 'settled' : 'processing',
+              provider_transfer_id: response.providerId,
+              settlement_reference: response.providerId,
+              expected_settlement_at: response.estimatedSettlementAt,
+              routing_strategy: routing.reason,
+              routing_reason: {
+                provider: routing.provider,
+                factors: routing.factors,
+              },
             })
             .eq('id', transfer.id);
 
           results.succeeded++;
-
-          console.log(`[ProcessACH] Transfer ${transfer.id} submitted: ${result.chargeId || result.payoutId}`);
+          console.log(`[ProcessACH] Transfer ${transfer.id} submitted via ${routing.provider}: ${response.providerId}`);
         } else {
+          // Update transfer as failed
           await supabase
             .from('bank_transfers')
             .update({
               status: 'failed',
-              failure_code: result.errorCode,
-              failure_reason: result.error,
+              failure_code: response.failureCode,
+              failure_reason: response.failureMessage,
               failed_at: new Date().toISOString(),
             })
             .eq('id', transfer.id);
@@ -405,10 +275,10 @@ serve(async (req) => {
           results.failed++;
           results.errors.push({
             transferId: transfer.id,
-            error: result.error || 'Unknown error',
+            error: response.failureMessage || 'Unknown error',
           });
 
-          console.error(`[ProcessACH] Transfer ${transfer.id} failed:`, result.error);
+          console.error(`[ProcessACH] Transfer ${transfer.id} failed:`, response.failureMessage);
         }
       } catch (err) {
         results.failed++;

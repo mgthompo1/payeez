@@ -17,6 +17,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
 import { authenticateApiKey, buildCorsHeaders } from '../_shared/auth.ts';
+import { initiateVerification, verifyMicroDeposits } from '../_shared/ach/index.ts';
 
 // ============================================
 // Types
@@ -121,7 +122,10 @@ function decryptBankData(vaultToken: string): {
 }
 
 function hashValue(value: string, prefix: string): string {
-  const salt = Deno.env.get('BANK_HASH_SALT') || 'atlas-bank-hash';
+  const salt = Deno.env.get('BANK_HASH_SALT');
+  if (!salt) {
+    throw new Error('BANK_HASH_SALT environment variable is required for production security');
+  }
   return createHash('sha256')
     .update(`${salt}:${prefix}:${value}`)
     .digest('hex');
@@ -255,18 +259,45 @@ serve(async (req) => {
         );
       }
 
-      // Verify amounts (order doesn't matter)
-      const correctAmounts = [account.microdeposit_amount_1, account.microdeposit_amount_2].sort((a, b) => a - b);
-      const userAmounts = [...body.amounts].sort((a, b) => a - b);
-      const isCorrect = correctAmounts[0] === userAmounts[0] && correctAmounts[1] === userAmounts[1];
-
       const attempts = (account.verification_attempts || 0) + 1;
+      const maxAttempts = 3;
+      let isCorrect = false;
+
+      // If we have a provider reference (e.g., Stripe SetupIntent), verify through the provider
+      if (account.verification_evidence_ref) {
+        const verifyResult = await verifyMicroDeposits(
+          account.verification_evidence_ref,
+          body.amounts as [number, number],
+          auth.tenantId,
+          supabase
+        );
+
+        if (verifyResult.success) {
+          isCorrect = true;
+        } else if (verifyResult.error) {
+          // Provider-specific verification failure
+          console.log(`[Bank Accounts] Provider verification failed: ${verifyResult.error}`);
+          // Don't count this as an attempt if it's a provider error
+          if (verifyResult.error.includes('network') || verifyResult.error.includes('timeout')) {
+            return new Response(
+              JSON.stringify({ error: { code: 'provider_error', message: 'Verification service temporarily unavailable' } }),
+              { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+      } else {
+        // Fall back to local verification for legacy accounts
+        const correctAmounts = [account.microdeposit_amount_1, account.microdeposit_amount_2].sort((a: number, b: number) => a - b);
+        const userAmounts = [...body.amounts].sort((a, b) => a - b);
+        isCorrect = correctAmounts[0] === userAmounts[0] && correctAmounts[1] === userAmounts[1];
+      }
 
       if (isCorrect) {
         await supabase
           .from('bank_accounts')
           .update({
             verification_status: 'verified',
+            verification_strength: 'basic', // Micro-deposits are basic verification
             verified_at: new Date().toISOString(),
             verification_attempts: attempts,
           })
@@ -277,7 +308,6 @@ serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
-        const maxAttempts = 3;
         if (attempts >= maxAttempts) {
           await supabase
             .from('bank_accounts')
@@ -347,22 +377,64 @@ serve(async (req) => {
         );
       }
 
-      // Generate two random amounts between $0.01 and $0.99
-      const amount1 = Math.floor(Math.random() * 99) + 1; // 1-99 cents
-      const amount2 = Math.floor(Math.random() * 99) + 1;
+      // Get the decrypted bank account data for verification
+      let bankData;
+      try {
+        bankData = decryptBankData(account.vault_token);
+      } catch (decryptError) {
+        console.error('[Bank Accounts] Failed to decrypt bank data:', decryptError);
+        return new Response(
+          JSON.stringify({ error: { code: 'decrypt_failed', message: 'Failed to access bank account data' } }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-      // Set expiry to 10 days from now
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 10);
+      // Call the ACH adapter to initiate verification
+      const { response: verificationResult, provider } = await initiateVerification(
+        {
+          accountNumber: bankData.account_number,
+          routingNumber: bankData.routing_number,
+          accountType: (bankData.account_type as 'checking' | 'savings') || 'checking',
+          accountHolderName: bankData.holder_name,
+          accountHolderType: 'individual', // Could be determined from customer type
+        },
+        auth.tenantId,
+        supabase,
+        {
+          preferredMethod: 'micro_deposits',
+        }
+      );
 
-      // Update account with micro-deposit info
+      if (!verificationResult.success) {
+        console.error('[Bank Accounts] ACH verification initiation failed:', verificationResult.error);
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'initiate_failed',
+              message: verificationResult.error || 'Failed to initiate micro-deposits via ACH provider',
+            },
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Set expiry based on provider response or default to 10 days
+      const expiresAt = verificationResult.expiresAt
+        ? new Date(verificationResult.expiresAt)
+        : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+
+      // Update account with verification info
       const { error: updateError } = await supabase
         .from('bank_accounts')
         .update({
-          verification_method: 'microdeposit',
+          verification_method: verificationResult.method,
           verification_status: 'pending',
-          microdeposit_amount_1: amount1,
-          microdeposit_amount_2: amount2,
+          verification_strength: verificationResult.strength,
+          verification_evidence_ref: verificationResult.providerRef,
+          // For micro-deposits, amounts come from provider (Stripe sends them automatically)
+          // We store the provider ref so we can verify later
+          microdeposit_amount_1: verificationResult.amounts?.[0] || null,
+          microdeposit_amount_2: verificationResult.amounts?.[1] || null,
           microdeposit_sent_at: new Date().toISOString(),
           microdeposit_expires_at: expiresAt.toISOString(),
           verification_attempts: 0,
@@ -370,22 +442,26 @@ serve(async (req) => {
         .eq('id', accountId);
 
       if (updateError) {
-        console.error('[Bank Accounts] Initiate micro-deposits error:', updateError);
+        console.error('[Bank Accounts] Update after initiation failed:', updateError);
         return new Response(
-          JSON.stringify({ error: { code: 'initiate_failed', message: 'Failed to initiate micro-deposits' } }),
+          JSON.stringify({ error: { code: 'update_failed', message: 'Failed to update verification status' } }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // In production, this would trigger actual ACH credits via Stripe/settlement provider
-      // For now, we record the amounts and the merchant would need to actually send them
-      console.log(`[Bank Accounts] Micro-deposits initiated for ${accountId}: $0.${amount1.toString().padStart(2, '0')}, $0.${amount2.toString().padStart(2, '0')}`);
+      console.log(`[Bank Accounts] Verification initiated for ${accountId} via ${provider} (${verificationResult.method})`);
 
       return new Response(
         JSON.stringify({
           status: 'pending',
-          message: 'Micro-deposits initiated. Two small deposits will appear in 1-3 business days.',
+          method: verificationResult.method,
+          strength: verificationResult.strength,
+          message: verificationResult.method === 'financial_connections'
+            ? 'Please complete bank verification via the provided link.'
+            : 'Micro-deposits initiated. Two small deposits will appear in 1-3 business days.',
           expires_at: expiresAt.toISOString(),
+          // For Financial Connections, include the session URL
+          session_url: verificationResult.sessionUrl,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

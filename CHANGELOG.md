@@ -56,6 +56,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Added `cancelled` to transfer_status enum** - Cancel endpoint now works
 - Migration 00028: Adds cancelled status, unique idempotency index
 
+#### Critical: ACH Infrastructure Fixes (Multi-Rail Orchestration)
+
+**Complete rewrite of ACH processing to use modern Stripe APIs and multi-rail architecture:**
+
+- **Modern Stripe ACH API** (process-ach-transfers)
+  - Replaced legacy Stripe bank_account tokens with PaymentIntents + `us_bank_account`
+  - Uses modern Stripe API version 2023-10-16
+  - Proper mandate data for NACHA compliance
+  - Payment method created inline with PaymentIntent (no deprecated tokens)
+
+- **Bank Transfer Attempts Tracking** (Migration 00029)
+  - New `bank_transfer_attempts` table mirrors `payment_attempts` pattern
+  - Per-attempt status, failure tracking, and raw response storage
+  - New `bank_transfer_events` table for webhook event log
+  - Full audit trail with idempotency keys per attempt
+
+- **ACH Adapter Architecture** (`_shared/ach/`)
+  - `types.ts`: ACH adapter interface, return codes with severity
+  - `stripe.ts`: Stripe ACH adapter using PaymentIntents + Financial Connections
+  - `index.ts`: ACH orchestrator with routing explainability
+  - Future-ready for Moov, PayPal ACH, NACHA file adapters
+
+- **Credential Decryption Fixed**
+  - Uses `decryptJson()` helper instead of raw JSON.parse fallback
+  - ACH orchestrator properly retrieves and decrypts PSP credentials
+
+- **Micro-Deposit Verification Wired**
+  - `POST /bank-accounts/:id/initiate-microdeposits` now calls ACH adapter
+  - Stripe SetupIntent created for micro-deposit flow
+  - Financial Connections supported for instant verification
+  - Verification provider reference stored for status checks
+
+- **bank_account Rejected from confirm-payment**
+  - ACH payments must use dedicated `/bank-transfers` API
+  - Clear error message with guidance to proper endpoints
+  - Prevents confusion between card and ACH payment flows
+
+- **BANK_HASH_SALT Security**
+  - Requires environment variable (no hardcoded fallback)
+  - Fails fast with clear error if not configured
+
+- **ACH Webhooks Updated**
+  - Looks up `bank_transfer_attempts` by provider_reference first
+  - Updates attempt status, then propagates to transfer
+  - Records all events in `bank_transfer_events` table
+  - Backwards compatible with legacy charge events
+  - Enhanced ACH return code handling with severity levels
+
 ### Changed
 
 #### Mandate Enforcement for Debits

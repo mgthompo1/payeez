@@ -218,6 +218,19 @@ serve(async (req) => {
       );
     }
 
+    // Reject bank_account - ACH payments use the dedicated /bank-transfers API
+    if (paymentMethodType === 'bank_account') {
+      return invalidRequestError(
+        'Bank account (ACH) payments must use the /bank-transfers API, not /confirm-payment. ' +
+        'Create a bank account via /bank-accounts, set up a mandate via /bank-mandates, ' +
+        'then initiate the transfer via POST /bank-transfers.',
+        'invalid_payment_method',
+        'payment_method_type',
+        requestId,
+        corsOrigin
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // NOW acquire per-session lock using atomic status update
