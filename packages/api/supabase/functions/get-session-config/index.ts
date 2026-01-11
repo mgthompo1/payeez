@@ -74,12 +74,12 @@ serve(async (req) => {
       );
     }
 
-    // Get tenant's Basis Theory public key and payment method config
+    // Get tenant configuration including vault provider
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('basis_theory_public_key, environment')
+      .select('basis_theory_public_key, environment, vault_provider')
       .eq('id', auth.tenantId)
       .single();
 
@@ -90,6 +90,10 @@ serve(async (req) => {
       .eq('tenant_id', auth.tenantId)
       .eq('environment', tenant?.environment || 'test')
       .single();
+
+    // Determine vault provider (default to 'atlas' if not configured)
+    // Valid providers: 'atlas' (native), 'basis_theory', 'vgs'
+    const vaultProvider = tenant?.vault_provider || 'atlas';
 
     // Determine available payment methods from session or tenant config
     const sessionPaymentMethods = session.payment_method_types || [];
@@ -114,17 +118,28 @@ serve(async (req) => {
       ? sessionPaymentMethods.filter((m: string) => availablePaymentMethods.includes(m))
       : availablePaymentMethods;
 
-    // Build response config
+    // Build response config with actual vault provider
     const responseConfig: Record<string, any> = {
       session_id: session.id,
       client_secret: session.client_secret,
       amount: session.amount,
       currency: session.currency,
-      capture_provider: 'basis_theory',
-      basis_theory_key: tenant?.basis_theory_public_key || Deno.env.get('BASIS_THEORY_PUBLIC_KEY'),
+      capture_provider: vaultProvider,
       fallback_url: session.fallback_url,
       payment_methods: paymentMethods,
+      // Environment for proper SDK configuration
+      environment: tenant?.environment || 'test',
     };
+
+    // Add provider-specific configuration
+    if (vaultProvider === 'basis_theory') {
+      responseConfig.basis_theory_key = tenant?.basis_theory_public_key || Deno.env.get('BASIS_THEORY_PUBLIC_KEY');
+    } else if (vaultProvider === 'atlas') {
+      // Atlas native vault - SDK will use the tokenize endpoint
+      responseConfig.tokenize_url = `${Deno.env.get('ATLAS_ELEMENTS_URL') || 'https://elements.atlas.io'}/api/tokenize`;
+    } else if (vaultProvider === 'vgs') {
+      responseConfig.vgs_vault_id = Deno.env.get('VGS_VAULT_ID');
+    }
 
     // Add Apple Pay config if enabled
     if (paymentMethods.includes('apple_pay') && paymentMethodConfig) {

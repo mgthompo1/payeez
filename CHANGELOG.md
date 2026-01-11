@@ -7,6 +7,136 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.1] - 2026-01-10
+
+### Fixed
+
+#### Critical: Session Lock Timing
+- **Session no longer gets stuck in 'processing'** if body parse/validation fails
+- Body parsing and validation now happens BEFORE acquiring the database lock
+- Added lock release in catch block for unexpected errors during payment processing
+- Prevents orphaned sessions that require manual database intervention
+
+#### PayPal Integration
+- **PayPal added to all PSP CHECK constraints** in database schema (migration 00027)
+  - `psp_credentials.psp`
+  - `payment_attempts.psp`
+  - `routing_rules.psp`
+  - And related tables (psp_priorities, traffic_split_rules, retry_rules)
+- **`requires_action` status** added to `payment_attempts.status` for 3DS/redirect flows
+- **Fixed partial capture currency bug** - no longer hardcodes USD, uses order currency
+- **Added `paypal` to PaymentMethodType** in OpenAPI spec
+- **PayPal vault validation** - explicit error when using PayPal card processing with non-atlas vault
+
+### Added
+- PayPal wallet payment example in OpenAPI ConfirmPaymentRequest examples
+
+---
+
+## [2.2.0] - 2026-01-10
+
+### Added
+
+#### Stripe-Compatible Error Schema
+- **Standardized error response format** following Stripe's pattern:
+  - `type`: Error category (api_error, card_error, invalid_request_error, etc.)
+  - `code`: Specific error code for programmatic handling
+  - `message`: Human-readable error message
+  - `decline_code`: Card-specific decline reason
+  - `param`: Parameter that caused validation errors
+  - `request_id`: Unique ID for debugging and support
+  - `doc_url`: Link to error documentation
+
+#### Request Tracing
+- **`X-Request-Id` header** on all API responses
+- Request IDs included in all error responses
+- Format: `req_{timestamp}_{random}` for easy correlation
+
+#### Session Lifecycle Endpoints
+- **`GET /sessions/{id}`**: Retrieve session with full details
+- **`PATCH /sessions/{id}`**: Update session (amount, metadata, customer, etc.)
+- **`POST /sessions/{id}/cancel`**: Cancel with reason tracking
+- Support for both API key and client secret authentication
+- Full state machine documentation
+
+#### Enhanced `requires_action` Response
+- **`next_action` object** with Stripe-compatible format:
+  - `type`: Action type (redirect)
+  - `redirect_to_url.url`: Redirect URL for 3DS/PayPal
+  - `redirect_to_url.return_url`: Return URL after completion
+- **`three_d_secure` details** when available:
+  - `version`: 3DS version used
+  - `authentication_status`: Auth result
+  - `eci`: Electronic Commerce Indicator
+
+### Changed
+
+#### HTTP Status Codes (Stripe-Compatible)
+- **402 Payment Required**: Card/payment failures (was 400)
+- **409 Conflict**: Idempotency conflicts and concurrent requests
+- **401 Unauthorized**: Authentication failures
+- Proper status codes for all error types
+
+#### Session Config Response
+- `capture_provider` now returns actual vault (atlas, basis_theory, vgs)
+- Added `environment` field (test/live)
+- Added `tokenize_url` for Atlas vault
+- Provider-specific config based on tenant settings
+
+#### OpenAPI Specification
+- Updated error schemas with full Stripe-compatible format
+- Added session lifecycle endpoints
+- Added `requires_action` to SessionStatus enum
+- Added `windcave` and `paypal` to PSPName enum
+- Added PaymentSessionFull schema with next_action
+
+---
+
+## [2.1.0] - 2026-01-10
+
+### Added
+
+#### PayPal PSP Integration
+- **Full PayPal adapter** supporting:
+  - Advanced Card Payments (PCI SAQ D card processing through PayPal)
+  - PayPal Wallet redirect flow
+  - 3DS verification with `SCA_WHEN_REQUIRED`
+  - PayPal Orders API v2 integration
+- **PayPal webhook support**:
+  - Signature verification via PayPal's verification API
+  - Event normalization for checkout, capture, authorization, and refund events
+  - Automatic session status updates from webhooks
+
+#### 3DS Support in Confirm Flow
+- **`requires_action` status handling**:
+  - Returns redirect URL for 3DS/PayPal approval flows
+  - Session status updated to `requires_action`
+  - Includes `next_action.redirect_url` in response
+  - 3DS version and status included when available
+
+### Security Fixes
+
+#### Critical: Double-Charge Prevention
+- **Per-session atomic locking**: Uses database atomic update with conditional WHERE clause to prevent race conditions
+- **Stable idempotency keys**: Removed `Date.now()` from key generation - now uses `atlas_{sessionId}_attempt_{attemptNumber}`
+- **Blocked re-confirmation from `processing` status**: Prevents duplicate charges if user clicks confirm twice
+
+#### Critical: PCI DSS 3.2.2 Compliance
+- **CVC clearing after authorization**: `markTokenUsed()` now re-encrypts card data without CVC after successful payment
+- **Token deactivation**: Tokens marked as inactive after use to prevent reuse
+
+#### High: Cross-Tenant Data Leakage
+- **Mandatory sessionId in production**: Tokenization endpoint requires valid sessionId in production
+- **Session status validation**: Can only tokenize for sessions in `requires_payment_method` state
+- **Tenant binding**: Tokens are explicitly bound to the tenant from the session
+
+### Changed
+
+- Webhooks endpoint now supports Stripe, Adyen, and PayPal (was Stripe + Adyen only)
+- Confirm-payment flow properly handles PSP `requires_action` responses instead of treating them as failures
+
+---
+
 ## [2.0.0] - 2026-01-10
 
 ### Breaking Changes

@@ -37,7 +37,7 @@ export interface CaptureRequest {
   amount?: number; // for partial capture
 }
 
-export interface RefundRequest {
+export interface PSPRefundRequest {
   transactionId: string;
   amount: number; // cents
   idempotencyKey: string;
@@ -84,7 +84,7 @@ export interface PSPAdapter {
    * Refund a captured payment
    */
   refund(
-    req: RefundRequest,
+    req: PSPRefundRequest,
     credentials: Record<string, string>
   ): Promise<AuthorizeResponse>;
 

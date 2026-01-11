@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { authenticateClientSecret } from '../_shared/auth.ts';
+import { authenticateClientSecret, buildCorsHeaders } from '../_shared/auth.ts';
 import { fetchPSPCredentials } from '../_shared/psp.ts';
 import { createOrchestrator, type RouteDecision, type RetryContext } from '../_shared/orchestrator.ts';
 import { stripeAdapter } from '../_shared/adapters/stripe.ts';
@@ -13,15 +13,21 @@ import { braintreeAdapter } from '../_shared/adapters/braintree.ts';
 import { checkoutcomAdapter } from '../_shared/adapters/checkoutcom.ts';
 import { airwallexAdapter } from '../_shared/adapters/airwallex.ts';
 import { windcaveAdapter } from '../_shared/adapters/windcave.ts';
+import { paypalAdapter } from '../_shared/adapters/paypal.ts';
 import { getCardDataFromVault, markTokenUsed } from '../_shared/vault.ts';
+import {
+  getRequestContext,
+  authenticationError,
+  invalidRequestError,
+  cardError,
+  idempotencyError,
+  apiError,
+  createSuccessResponse,
+  paymentFailedError,
+  createErrorResponse,
+} from '../_shared/responses.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-type PaymentMethodType = 'card' | 'apple_pay' | 'google_pay' | 'bank_account';
+type PaymentMethodType = 'card' | 'apple_pay' | 'google_pay' | 'bank_account' | 'paypal';
 
 interface ConfirmRequest {
   payment_method_type: PaymentMethodType;
@@ -54,12 +60,16 @@ const adapters: Record<string, any> = {
   checkoutcom: checkoutcomAdapter,
   airwallex: airwallexAdapter,
   windcave: windcaveAdapter,
+  paypal: paypalAdapter,
 };
 
 // Maximum retry attempts
 const MAX_RETRY_ATTEMPTS = 3;
 
 serve(async (req) => {
+  const { requestId, corsOrigin } = getRequestContext(req);
+  const corsHeaders = buildCorsHeaders(corsOrigin);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -85,17 +95,22 @@ serve(async (req) => {
     }
 
     if (!sessionId || sessionId === 'confirm-payment') {
-      return new Response(
-        JSON.stringify({ error: 'Session ID required. Provide in URL path or request body as session_id' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return invalidRequestError(
+        'Session ID required. Provide in URL path or request body as session_id',
+        'parameter_missing',
+        'session_id',
+        requestId,
+        corsOrigin
       );
     }
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Client secret required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return authenticationError(
+        'Client secret required in Authorization header',
+        'missing_client_secret',
+        requestId,
+        corsOrigin
       );
     }
 
@@ -103,62 +118,141 @@ serve(async (req) => {
     const auth = await authenticateClientSecret(sessionId, clientSecret, supabaseUrl, supabaseServiceKey);
 
     if (!auth) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid session or client secret' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return authenticationError(
+        'Invalid session ID or client secret',
+        'invalid_client_secret',
+        requestId,
+        corsOrigin
       );
     }
 
     const { session, tenantId } = auth;
 
     if (session.status === 'succeeded') {
-      return new Response(
-        JSON.stringify({ error: 'Session already completed' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return createErrorResponse({
+        type: 'invalid_request_error',
+        code: 'session_already_completed',
+        message: 'This payment session has already been completed',
+        requestId,
+        corsOrigin,
+      });
+    }
+
+    // Only allow confirmation from requires_payment_method status
+    // Do NOT allow re-confirmation from 'processing' - this prevents double-charges
+    if (session.status !== 'requires_payment_method') {
+      if (session.status === 'processing') {
+        return idempotencyError(
+          'Payment is already being processed. Please wait for completion.',
+          'session_already_processing',
+          requestId,
+          corsOrigin
+        );
+      }
+      return createErrorResponse({
+        type: 'invalid_request_error',
+        code: 'invalid_session_state',
+        message: `Cannot confirm session in status: ${session.status}`,
+        requestId,
+        corsOrigin,
+      });
+    }
+
+    // CRITICAL: Parse and validate body BEFORE acquiring the lock
+    // This prevents the session from getting stuck in 'processing' if validation fails
+    let body: ConfirmRequest;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      return invalidRequestError(
+        'Invalid JSON in request body',
+        'invalid_json',
+        undefined,
+        requestId,
+        corsOrigin
       );
     }
 
-    if (session.status !== 'requires_payment_method' && session.status !== 'processing') {
-      return new Response(
-        JSON.stringify({ error: `Cannot confirm session in status: ${session.status}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const body: ConfirmRequest = await req.json();
     const paymentMethodType = body.payment_method_type || 'card';
     const tokenProvider = body.token_provider || 'basis_theory';
 
-    // Validation
+    // Validation BEFORE lock acquisition
     if (paymentMethodType === 'card' && !body.token_id) {
-      return new Response(
-        JSON.stringify({ error: 'token_id is required for card payments' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return invalidRequestError(
+        'token_id is required for card payments',
+        'parameter_missing',
+        'token_id',
+        requestId,
+        corsOrigin
       );
     }
 
     if (paymentMethodType === 'apple_pay' && !body.apple_pay_token) {
-      return new Response(
-        JSON.stringify({ error: 'apple_pay_token is required for Apple Pay' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return invalidRequestError(
+        'apple_pay_token is required for Apple Pay',
+        'parameter_missing',
+        'apple_pay_token',
+        requestId,
+        corsOrigin
       );
     }
 
     if (paymentMethodType === 'google_pay' && !body.google_pay_token) {
-      return new Response(
-        JSON.stringify({ error: 'google_pay_token is required for Google Pay' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return invalidRequestError(
+        'google_pay_token is required for Google Pay',
+        'parameter_missing',
+        'google_pay_token',
+        requestId,
+        corsOrigin
+      );
+    }
+
+    // Validate PayPal requirements - only works with atlas vault for card processing
+    if (paymentMethodType === 'card' && body.psp === 'paypal' && tokenProvider !== 'atlas') {
+      return invalidRequestError(
+        'PayPal card processing requires atlas vault. Set token_provider to "atlas".',
+        'invalid_token_provider',
+        'token_provider',
+        requestId,
+        corsOrigin
       );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const orchestrator = createOrchestrator(supabase);
 
-    // Update session status
-    await supabase
+    // NOW acquire per-session lock using atomic status update
+    // This prevents race conditions where multiple requests try to confirm simultaneously
+    const { data: lockResult, error: lockError } = await supabase
       .from('payment_sessions')
-      .update({ status: 'processing' })
-      .eq('id', sessionId);
+      .update({
+        status: 'processing',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', sessionId)
+      .eq('status', 'requires_payment_method') // Only update if still in expected state
+      .select('id')
+      .single();
+
+    if (lockError || !lockResult) {
+      // Another request already started processing
+      return idempotencyError(
+        'Payment is already being processed or session state changed',
+        'concurrent_request',
+        requestId,
+        corsOrigin
+      );
+    }
+
+    // Helper to release lock on error (reset to requires_payment_method)
+    const releaseLock = async () => {
+      await supabase
+        .from('payment_sessions')
+        .update({ status: 'requires_payment_method', updated_at: new Date().toISOString() })
+        .eq('id', sessionId)
+        .eq('status', 'processing');
+    };
+
+    const orchestrator = createOrchestrator(supabase);
 
     // Get tenant environment
     const { data: tenant } = await supabase
@@ -352,8 +446,9 @@ serve(async (req) => {
         continue; // Try next PSP
       }
 
-      // Generate idempotency key
-      const idempotencyKey = `${sessionId}_${attemptNumber}_${Date.now()}`;
+      // Generate stable idempotency key - same session + attempt = same key
+      // This prevents duplicate charges if the same request is retried
+      const idempotencyKey = `atlas_${sessionId}_attempt_${attemptNumber}`;
 
       // Record payment attempt
       const { data: attempt } = await supabase
@@ -382,9 +477,12 @@ serve(async (req) => {
       const startTime = Date.now();
 
       try {
-        // For Windcave with Atlas vault, we need to retrieve card data first
+        // For PSPs that need raw card data (not token-based), retrieve from Atlas vault
+        // - Windcave: Uses direct card data
+        // - PayPal: Uses card data for Advanced Card Processing (requires PCI SAQ D)
         let cardData = null;
-        if (decision.psp === 'windcave' && tokenProvider === 'atlas') {
+        const pspsNeedingCardData = ['windcave', 'paypal'];
+        if (pspsNeedingCardData.includes(decision.psp) && tokenProvider === 'atlas') {
           const decryptedCard = await getCardDataFromVault(vaultTokenId, sessionId);
           if (!decryptedCard) {
             throw new Error('Failed to retrieve card data from vault');
@@ -510,6 +608,64 @@ serve(async (req) => {
             .eq('id', token.id);
         }
 
+        // Handle 3DS or redirect flow (requires_action)
+        if (result.status === 'requires_action') {
+          // Update session status to requires_action
+          await supabase
+            .from('payment_sessions')
+            .update({ status: 'requires_action' })
+            .eq('id', sessionId);
+
+          // Store next action details for resumption
+          if (attempt?.id) {
+            await supabase
+              .from('payment_attempts')
+              .update({
+                status: 'requires_action',
+                psp_transaction_id: result.transactionId,
+                raw_response: result.rawResponse,
+              })
+              .eq('id', attempt.id);
+          }
+
+          return createSuccessResponse(
+            {
+              id: attempt?.id,
+              object: 'payment_intent',
+              session_id: sessionId,
+              amount: session.amount,
+              currency: session.currency,
+              status: 'requires_action',
+              payment_method_type: paymentMethodType,
+              psp: decision.psp,
+              psp_transaction_id: result.transactionId,
+              // 3DS / redirect action details - Stripe-compatible format
+              next_action: result.nextAction ? {
+                type: result.nextAction.type,
+                redirect_to_url: {
+                  url: result.nextAction.url,
+                  return_url: session.success_url,
+                },
+              } : undefined,
+              // Include 3DS details if available
+              three_d_secure: result.threeDsVersion ? {
+                version: result.threeDsVersion,
+                authentication_status: result.threeDsStatus,
+                eci: result.threeDsEci,
+              } : undefined,
+              routing: {
+                attempts: attemptNumber,
+                selected_psp: decision.psp,
+                selection_reason: decision.reason,
+              },
+              created_at: attempt?.created_at,
+              livemode: environment === 'live',
+            },
+            200,
+            { requestId, corsOrigin }
+          );
+        }
+
         if (result.success) {
           // Payment succeeded!
           const sessionStatus = result.status === 'captured' ? 'succeeded' : 'processing';
@@ -518,9 +674,16 @@ serve(async (req) => {
             .update({ status: sessionStatus })
             .eq('id', sessionId);
 
-          return new Response(
-            JSON.stringify({
+          // PCI Compliance: Mark token as used and clear sensitive data (CVC)
+          // This prevents CVC from being stored after authorization
+          if (tokenProvider === 'atlas' && vaultTokenId) {
+            await markTokenUsed(vaultTokenId);
+          }
+
+          return createSuccessResponse(
+            {
               id: attempt?.id,
+              object: 'payment_intent',
               session_id: sessionId,
               amount: session.amount,
               currency: session.currency,
@@ -530,7 +693,12 @@ serve(async (req) => {
               psp_transaction_id: result.transactionId,
               captured_amount: result.status === 'captured' ? session.amount : 0,
               refunded_amount: 0,
-              card: result.card,
+              card: result.card ? {
+                brand: result.card.brand,
+                last4: result.card.last4,
+                exp_month: result.card.exp_month,
+                exp_year: result.card.exp_year,
+              } : undefined,
               wallet: ['apple_pay', 'google_pay'].includes(paymentMethodType)
                 ? { type: paymentMethodType, card_network: result.card?.brand }
                 : undefined,
@@ -544,8 +712,10 @@ serve(async (req) => {
                 is_retry: decision.isRetry,
               },
               created_at: attempt?.created_at,
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              livemode: environment === 'live',
+            },
+            200,
+            { requestId, corsOrigin }
           );
         }
 
@@ -581,26 +751,46 @@ serve(async (req) => {
       }
     }
 
-    // All attempts exhausted - return failure
+    // All attempts exhausted - return failure with 402 status (Stripe convention)
     await supabase
       .from('payment_sessions')
       .update({ status: 'failed' })
       .eq('id', sessionId);
 
-    return new Response(
-      JSON.stringify({
-        error: lastResult?.failureMessage || 'Payment failed after all retry attempts',
-        code: lastResult?.failureCode || 'all_attempts_failed',
-        attempts: attemptNumber,
-        last_psp: lastDecision?.psp,
-      }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    return paymentFailedError(
+      lastResult?.failureMessage || 'Payment failed after all retry attempts',
+      lastResult?.failureCode,
+      lastResult?.failureMessage,
+      requestId,
+      corsOrigin
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error('Unexpected error:', err);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+
+    // Release the lock if we acquired it (session might be stuck in 'processing')
+    // This happens when an unexpected error occurs after lock acquisition
+    // Only attempt if sessionId is a valid UUID (not 'confirm-payment' placeholder)
+    if (sessionId && sessionId !== 'confirm-payment' && !sessionId.includes('/')) {
+      try {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        );
+        await supabase
+          .from('payment_sessions')
+          .update({ status: 'requires_payment_method', updated_at: new Date().toISOString() })
+          .eq('id', sessionId)
+          .eq('status', 'processing');
+      } catch {
+        // Ignore lock release errors in catch block
+      }
+    }
+
+    return apiError(
+      'An unexpected error occurred while processing the payment',
+      'internal_error',
+      requestId,
+      corsOrigin
     );
   }
 });

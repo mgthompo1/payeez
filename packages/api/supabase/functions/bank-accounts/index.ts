@@ -222,7 +222,7 @@ serve(async (req) => {
       const { data: account, error: accountError } = await supabase
         .from('bank_accounts')
         .select('*')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('id', accountId)
         .single();
 
@@ -358,7 +358,7 @@ serve(async (req) => {
       const { data: existing } = await supabase
         .from('bank_accounts')
         .select('id')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('account_hash', accountHash)
         .single();
 
@@ -387,7 +387,7 @@ serve(async (req) => {
       const { data: account, error } = await supabase
         .from('bank_accounts')
         .insert({
-          profile_id: auth.tenantId,
+          tenant_id: auth.tenantId,
           customer_id: body.customer_id || null,
           vault_token: vaultToken,
           last4: body.account_number.slice(-4),
@@ -429,7 +429,7 @@ serve(async (req) => {
       let query = supabase
         .from('bank_accounts')
         .select('*', { count: 'exact' })
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -467,7 +467,7 @@ serve(async (req) => {
       const { data: account, error } = await supabase
         .from('bank_accounts')
         .select('*')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('id', accountId)
         .single();
 
@@ -491,7 +491,7 @@ serve(async (req) => {
       const { data: existing } = await supabase
         .from('bank_accounts')
         .select('id')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('id', accountId)
         .single();
 
@@ -512,7 +512,7 @@ serve(async (req) => {
         await supabase
           .from('bank_accounts')
           .update({ is_default: false })
-          .eq('profile_id', auth.tenantId)
+          .eq('tenant_id', auth.tenantId)
           .neq('id', accountId);
       }
 
@@ -542,7 +542,7 @@ serve(async (req) => {
       const { data: existing } = await supabase
         .from('bank_accounts')
         .select('id')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('id', accountId)
         .single();
 

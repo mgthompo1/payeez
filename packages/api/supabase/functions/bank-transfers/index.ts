@@ -262,7 +262,7 @@ serve(async (req) => {
       const { data: transfer, error: fetchError } = await supabase
         .from('bank_transfers')
         .select('*')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('id', transferId)
         .single();
 
@@ -341,7 +341,7 @@ serve(async (req) => {
         const { data: existing } = await supabase
           .from('bank_transfers')
           .select('*')
-          .eq('profile_id', auth.tenantId)
+          .eq('tenant_id', auth.tenantId)
           .eq('idempotency_key', body.idempotency_key)
           .single();
 
@@ -357,7 +357,7 @@ serve(async (req) => {
       const { data: bankAccount, error: accountError } = await supabase
         .from('bank_accounts')
         .select('*')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('id', body.bank_account_id)
         .single();
 
@@ -379,7 +379,7 @@ serve(async (req) => {
       if (!riskResult.approved) {
         // Record risk event
         await supabase.from('bank_risk_events').insert({
-          profile_id: auth.tenantId,
+          tenant_id: auth.tenantId,
           bank_account_id: body.bank_account_id,
           event_type: 'transfer_blocked',
           severity: 'high',
@@ -404,7 +404,7 @@ serve(async (req) => {
       const { data: transfer, error } = await supabase
         .from('bank_transfers')
         .insert({
-          profile_id: auth.tenantId,
+          tenant_id: auth.tenantId,
           bank_account_id: body.bank_account_id,
           mandate_id: null, // Would be set if mandate-based
           amount: body.amount,
@@ -454,7 +454,7 @@ serve(async (req) => {
       let query = supabase
         .from('bank_transfers')
         .select('*', { count: 'exact' })
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -494,7 +494,7 @@ serve(async (req) => {
       const { data: transfer, error } = await supabase
         .from('bank_transfers')
         .select('*')
-        .eq('profile_id', auth.tenantId)
+        .eq('tenant_id', auth.tenantId)
         .eq('id', transferId)
         .single();
 

@@ -116,53 +116,63 @@ export async function POST(req: NextRequest) {
     try {
       const supabase = getSupabaseClient();
 
-      // First, get the tenant_id from the session if provided
-      let tenantId: string | null = null;
-      if (sessionId) {
-        const { data: session } = await supabase
-          .from('payment_sessions')
-          .select('tenant_id')
-          .eq('id', sessionId)
-          .single();
-
-        if (session) {
-          tenantId = session.tenant_id;
-        }
-      }
-
-      // If no session/tenant, we need a default tenant for dev
-      // In production, this should fail or use a specific flow
-      if (!tenantId) {
-        // Get a default tenant for development
-        const { data: defaultTenant } = await supabase
-          .from('tenants')
-          .select('id')
-          .limit(1)
-          .single();
-
-        tenantId = defaultTenant?.id;
-      }
-
-      if (!tenantId) {
-        console.error('[AtlasTokenizer] No tenant found for token storage');
-        // Fall back to returning token without DB storage in dev
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('[AtlasTokenizer] DEV MODE: Token created without DB storage');
+      // SECURITY: sessionId is required to establish tenant context
+      // Without it, we cannot securely associate the token with a tenant
+      if (!sessionId) {
+        // In production, require sessionId to prevent cross-tenant data leakage
+        if (process.env.NODE_ENV === 'production') {
+          console.error('[AtlasTokenizer] SECURITY: sessionId required in production');
           return NextResponse.json(
-            {
-              tokenId,
-              status: "created",
-              last4: cleanPan.slice(-4),
-              expiryMonth: cardData.expiryMonth,
-              expiryYear: `20${cardData.expiryYear}`,
-              brand: cardBrand,
-              _dev_warning: "Token not persisted - no tenant configured"
-            },
-            { status: 200, headers: c.headers }
+            { message: "Session ID is required for tokenization" },
+            { status: 400, headers: c.headers }
           );
         }
+        // In development, warn but continue with a dev-only token
+        console.warn('[AtlasTokenizer] DEV MODE: No sessionId provided - token will not be persisted');
         return NextResponse.json(
-          { message: "No tenant configured" },
+          {
+            tokenId,
+            status: "created",
+            last4: cleanPan.slice(-4),
+            expiryMonth: cardData.expiryMonth,
+            expiryYear: `20${cardData.expiryYear}`,
+            brand: cardBrand,
+            _dev_warning: "Token not persisted - no sessionId provided"
+          },
+          { status: 200, headers: c.headers }
+        );
+      }
+
+      // Get the tenant_id from the session
+      const { data: session } = await supabase
+        .from('payment_sessions')
+        .select('tenant_id, status')
+        .eq('id', sessionId)
+        .single();
+
+      if (!session) {
+        console.error('[AtlasTokenizer] Session not found:', sessionId);
+        return NextResponse.json(
+          { message: "Invalid session ID" },
+          { status: 400, headers: c.headers }
+        );
+      }
+
+      // Verify session is in a state that accepts tokenization
+      if (session.status !== 'requires_payment_method') {
+        console.error('[AtlasTokenizer] Session in invalid state:', session.status);
+        return NextResponse.json(
+          { message: `Cannot tokenize for session in state: ${session.status}` },
+          { status: 400, headers: c.headers }
+        );
+      }
+
+      const tenantId = session.tenant_id;
+
+      if (!tenantId) {
+        console.error('[AtlasTokenizer] Session has no tenant_id:', sessionId);
+        return NextResponse.json(
+          { message: "Session configuration error" },
           { status: 500, headers: c.headers }
         );
       }

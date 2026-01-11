@@ -1,12 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { authenticateApiKey, generateSecureToken } from '../_shared/auth.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { authenticateApiKey, generateSecureToken, buildCorsHeaders } from '../_shared/auth.ts';
+import {
+  getRequestContext,
+  authenticationError,
+  invalidRequestError,
+  apiError,
+  createSuccessResponse,
+} from '../_shared/responses.ts';
 
 interface Address {
   street?: string;
@@ -60,6 +61,9 @@ interface CreateSessionRequest {
 }
 
 serve(async (req) => {
+  const { requestId, corsOrigin, idempotencyKey } = getRequestContext(req);
+  const corsHeaders = buildCorsHeaders(corsOrigin);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -77,9 +81,11 @@ serve(async (req) => {
     );
 
     if (!auth) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return authenticationError(
+        'Invalid API key provided',
+        'invalid_api_key',
+        requestId,
+        corsOrigin
       );
     }
 
@@ -88,25 +94,29 @@ serve(async (req) => {
 
     // Validate required fields
     if (!body.amount || body.amount <= 0) {
-      return new Response(
-        JSON.stringify({ error: 'amount is required and must be positive' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return invalidRequestError(
+        'amount is required and must be a positive integer',
+        'parameter_invalid',
+        'amount',
+        requestId,
+        corsOrigin
       );
     }
 
     if (!body.currency) {
-      return new Response(
-        JSON.stringify({ error: 'currency is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return invalidRequestError(
+        'currency is required',
+        'parameter_missing',
+        'currency',
+        requestId,
+        corsOrigin
       );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get idempotency key
-    const idempotencyKey = req.headers.get('idempotency-key');
+    // Check for existing session with idempotency key
     if (idempotencyKey) {
-      // Check for existing session with this idempotency key
       const { data: existing } = await supabase
         .from('payment_sessions')
         .select('*')
@@ -115,9 +125,10 @@ serve(async (req) => {
         .single();
 
       if (existing) {
-        return new Response(
-          JSON.stringify({
+        return createSuccessResponse(
+          {
             id: existing.id,
+            object: 'payment_session',
             client_secret: existing.client_secret,
             status: existing.status,
             amount: existing.amount,
@@ -125,8 +136,10 @@ serve(async (req) => {
             external_id: existing.external_id,
             fallback_url: existing.fallback_url,
             created_at: existing.created_at,
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            livemode: auth.environment === 'live',
+          },
+          200,
+          { requestId, corsOrigin }
         );
       }
     }
@@ -172,30 +185,38 @@ serve(async (req) => {
 
     if (error) {
       console.error('Error creating session:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create session' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return apiError(
+        'Failed to create payment session',
+        'session_creation_failed',
+        requestId,
+        corsOrigin
       );
     }
 
-    return new Response(
-      JSON.stringify({
+    return createSuccessResponse(
+      {
         id: session.id,
+        object: 'payment_session',
         client_secret: session.client_secret,
         status: session.status,
         amount: session.amount,
         currency: session.currency,
+        capture_method: session.capture_method,
         external_id: session.external_id,
         fallback_url: session.fallback_url,
         created_at: session.created_at,
-      }),
-      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        livemode: auth.environment === 'live',
+      },
+      201,
+      { requestId, corsOrigin }
     );
   } catch (err) {
     console.error('Unexpected error:', err);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    return apiError(
+      'An unexpected error occurred',
+      'internal_error',
+      requestId,
+      corsOrigin
     );
   }
 });

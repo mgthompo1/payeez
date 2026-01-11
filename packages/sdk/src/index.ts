@@ -1030,10 +1030,5 @@ export default Atlas;
 
 export type { Payment, AtlasError, PaymentMethodType } from '@atlas/shared';
 
-// Re-export Hosted Fields types
-export type {
-  ElementType,
-  ElementOptions,
-  ElementInstance,
-  ElementsInstance,
-};
+// Note: Hosted Fields types (ElementType, ElementOptions, ElementInstance, ElementsInstance)
+// are already exported above in this file

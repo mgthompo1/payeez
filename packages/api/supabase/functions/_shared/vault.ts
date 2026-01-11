@@ -162,11 +162,13 @@ export async function getCardDataFromVault(
 
 /**
  * Mark a token as used/inactive after successful payment
- * Also clears the CVC (PCI requirement - don't store CVC after auth)
+ * Clears sensitive data (CVC) per PCI DSS requirement 3.2.2:
+ * "Do not store the card verification code after authorization"
  */
 export async function markTokenUsed(tokenId: string): Promise<void> {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const masterKey = Deno.env.get('ATLAS_MASTER_KEY') || Deno.env.get('ATLAS_CREDENTIALS_ENCRYPTION_KEY');
 
   if (!supabaseUrl || !supabaseKey) {
     return;
@@ -174,16 +176,124 @@ export async function markTokenUsed(tokenId: string): Promise<void> {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // For PCI compliance, we should ideally re-encrypt the card data without CVC
-  // For now, we'll just mark it inactive after use
-  await supabase
+  // For PCI compliance, we need to re-encrypt card data without CVC
+  // First, get the current token
+  const { data: token, error } = await supabase
     .from('tokens')
-    .update({
-      is_active: false,
-      // Clear encrypted data after use for security
-      // encrypted_card_data: null
-    })
-    .eq('vault_token_id', tokenId);
+    .select('*')
+    .eq('vault_token_id', tokenId)
+    .single();
+
+  if (error || !token) {
+    console.error('[AtlasVault] Token not found for cleanup:', tokenId);
+    return;
+  }
+
+  // If this is an Atlas vault token and we have the master key, re-encrypt without CVC
+  if (token.vault_provider === 'atlas' && token.encrypted_card_data && token.encryption_aad && masterKey) {
+    try {
+      // Decrypt current data
+      const encryptedData = JSON.parse(token.encrypted_card_data);
+      const decryptedJson = await decrypt(encryptedData, token.encryption_aad, masterKey);
+      const cardData = JSON.parse(decryptedJson) as DecryptedCardData;
+
+      // Remove CVC from card data
+      const sanitizedData = {
+        pan: cardData.pan,
+        cardHolderName: cardData.cardHolderName,
+        expiryMonth: cardData.expiryMonth,
+        expiryYear: cardData.expiryYear,
+        cvc: '', // Clear CVC
+        brand: cardData.brand,
+      };
+
+      // Re-encrypt without CVC using Web Crypto (Deno compatible)
+      const newAad = `${token.encryption_aad}|sanitized`;
+      const reencrypted = await encryptData(JSON.stringify(sanitizedData), newAad, masterKey);
+
+      // Update token with sanitized data
+      await supabase
+        .from('tokens')
+        .update({
+          encrypted_card_data: JSON.stringify(reencrypted),
+          encryption_aad: newAad,
+          is_active: false, // Mark as used
+        })
+        .eq('vault_token_id', tokenId);
+
+      console.log('[AtlasVault] Token sanitized (CVC cleared):', tokenId);
+    } catch (sanitizeError) {
+      console.error('[AtlasVault] Failed to sanitize token, clearing entirely:', sanitizeError);
+      // If re-encryption fails, just clear the encrypted data entirely
+      await supabase
+        .from('tokens')
+        .update({
+          encrypted_card_data: null,
+          is_active: false,
+        })
+        .eq('vault_token_id', tokenId);
+    }
+  } else {
+    // For non-Atlas tokens, just mark as inactive
+    await supabase
+      .from('tokens')
+      .update({ is_active: false })
+      .eq('vault_token_id', tokenId);
+  }
+}
+
+/**
+ * Encrypt data using AES-256-GCM (inverse of decrypt function)
+ */
+async function encryptData(
+  plaintext: string,
+  aad: string,
+  masterKey: string
+): Promise<{ v: number; iv: string; ct: string; tag: string }> {
+  const keyBytes = base64Decode(masterKey);
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyBytes,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  // Generate random IV (12 bytes for GCM)
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const encoded = new TextEncoder().encode(plaintext);
+  const encrypted = await crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv: iv,
+      additionalData: new TextEncoder().encode(aad),
+      tagLength: 128,
+    },
+    key,
+    encoded
+  );
+
+  // Web Crypto returns ciphertext + tag combined
+  const combined = new Uint8Array(encrypted);
+  const ciphertext = combined.slice(0, combined.length - 16);
+  const tag = combined.slice(combined.length - 16);
+
+  return {
+    v: 1,
+    iv: base64UrlEncode(iv),
+    ct: base64UrlEncode(ciphertext),
+    tag: base64UrlEncode(tag),
+  };
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /**

@@ -96,6 +96,113 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /sessions/{session_id}:
+    get:
+      summary: Retrieve Session
+      description: |
+        Retrieve a payment session by ID.
+        Supports both API key and client secret authentication.
+      operationId: retrieveSession
+      tags:
+        - Sessions
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSessionFull'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Update Session
+      description: |
+        Update a payment session. Only sessions in `requires_payment_method` status can be updated.
+      operationId: updateSession
+      tags:
+        - Sessions
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSessionRequest'
+      responses:
+        '200':
+          description: Session updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSessionFull'
+        '400':
+          description: Session cannot be updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/{session_id}/cancel:
+    post:
+      summary: Cancel Session
+      description: |
+        Cancel a payment session. Sessions in `requires_payment_method`, `requires_action`, or `processing` status can be canceled.
+      operationId: cancelSession
+      tags:
+        - Sessions
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cancellation_reason:
+                  type: string
+                  enum:
+                    - duplicate
+                    - fraudulent
+                    - requested_by_customer
+                    - abandoned
+      responses:
+        '200':
+          description: Session canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSessionFull'
+        '400':
+          description: Session cannot be canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /get-session-config/{session_id}:
     get:
       summary: Get Session Config
@@ -180,6 +287,12 @@ paths:
                   bank_account:
                     account_holder_name: John Doe
                     account_type: checking
+              paypal:
+                summary: PayPal wallet
+                value:
+                  payment_method_type: paypal
+                  psp: paypal
+                  token_provider: atlas
       responses:
         '200':
           description: Payment confirmed
@@ -683,6 +796,125 @@ components:
           type: string
           format: date-time
 
+    PaymentSessionFull:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        object:
+          type: string
+          enum: [payment_session]
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        amount:
+          type: integer
+        currency:
+          type: string
+        client_secret:
+          type: string
+        customer_email:
+          type: string
+        customer_name:
+          type: string
+        description:
+          type: string
+        capture_method:
+          type: string
+          enum: [automatic, manual]
+        payment_method_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodType'
+        billing_address:
+          type: object
+          additionalProperties: true
+        shipping_address:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        canceled_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
+        livemode:
+          type: boolean
+        latest_attempt:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            psp:
+              $ref: '#/components/schemas/PSPName'
+            status:
+              type: string
+            psp_transaction_id:
+              type: string
+        next_action:
+          type: object
+          nullable: true
+          description: Action required to complete payment (3DS, redirect)
+          properties:
+            type:
+              type: string
+              enum: [redirect]
+            redirect_to_url:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                return_url:
+                  type: string
+                  format: uri
+
+    UpdateSessionRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+        description:
+          type: string
+        statement_descriptor:
+          type: string
+        customer:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+            name:
+              type: string
+            phone:
+              type: string
+        billing_address:
+          type: object
+          additionalProperties: true
+        shipping_address:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
     SessionConfig:
       type: object
       properties:
@@ -697,7 +929,11 @@ components:
           type: string
         capture_provider:
           type: string
-          enum: [basis_theory]
+          enum: [atlas, basis_theory, vgs]
+          description: Vault provider for card tokenization
+        environment:
+          type: string
+          enum: [test, live]
         basis_theory_key:
           type: string
           description: Public key for Basis Theory Elements
@@ -1016,18 +1252,71 @@ components:
 
     PaymentError:
       type: object
+      required:
+        - error
       properties:
         error:
-          type: string
-        code:
-          type: string
-          description: Error code for programmatic handling
+          $ref: '#/components/schemas/ErrorDetails'
 
     Error:
       type: object
+      required:
+        - error
       properties:
         error:
+          $ref: '#/components/schemas/ErrorDetails'
+
+    ErrorDetails:
+      type: object
+      required:
+        - type
+        - code
+        - message
+        - request_id
+      properties:
+        type:
           type: string
+          enum:
+            - api_error
+            - authentication_error
+            - card_error
+            - idempotency_error
+            - invalid_request_error
+            - rate_limit_error
+            - validation_error
+          description: |
+            The type of error:
+            - `api_error` - Internal server errors (500)
+            - `authentication_error` - Invalid API key (401)
+            - `card_error` - Card was declined (402)
+            - `idempotency_error` - Idempotency key conflict (409)
+            - `invalid_request_error` - Invalid parameters (400)
+            - `rate_limit_error` - Too many requests (429)
+            - `validation_error` - Request validation failed (400)
+        code:
+          type: string
+          description: Specific error code for programmatic handling
+          example: card_declined
+        message:
+          type: string
+          description: Human-readable error message
+          example: Your card was declined
+        decline_code:
+          type: string
+          description: Card-specific decline reason (only for card_error type)
+          example: insufficient_funds
+        param:
+          type: string
+          description: Parameter that caused the error (for validation errors)
+          example: amount
+        request_id:
+          type: string
+          description: Unique request ID for debugging and support
+          example: req_1a2b3c_abc123
+        doc_url:
+          type: string
+          format: uri
+          description: Link to documentation for this error code
 
     PaymentMethodType:
       type: string
@@ -1036,17 +1325,25 @@ components:
         - apple_pay
         - google_pay
         - bank_account
+        - paypal
 
     SessionStatus:
       type: string
       enum:
-        - pending
         - requires_payment_method
+        - requires_action
         - processing
         - succeeded
         - failed
         - canceled
-        - refunded
+      description: |
+        Payment session status:
+        - `requires_payment_method` - Session created, awaiting payment method
+        - `requires_action` - Additional action needed (3DS, redirect)
+        - `processing` - Payment is being processed
+        - `succeeded` - Payment completed successfully
+        - `failed` - Payment failed
+        - `canceled` - Session was canceled
 
     PaymentStatus:
       type: string
@@ -1070,6 +1367,8 @@ components:
         - braintree
         - checkoutcom
         - airwallex
+        - windcave
+        - paypal
 
 tags:
   - name: Sessions

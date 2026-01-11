@@ -6,6 +6,7 @@
  * Routes:
  * - POST /webhooks/stripe - Stripe webhooks
  * - POST /webhooks/adyen - Adyen webhooks
+ * - POST /webhooks/paypal - PayPal webhooks
  * - POST /webhooks/:psp - Other PSP webhooks
  */
 
@@ -21,7 +22,7 @@ function getWebhookCorsHeaders(requestOrigin: string | null): Record<string, str
   // Webhooks come from PSP servers, not browsers - but we still want proper CORS for any browser-based testing
   return {
     ...baseHeaders,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-adyen-hmac-signature',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-adyen-hmac-signature, paypal-transmission-id, paypal-transmission-time, paypal-transmission-sig, paypal-cert-url, paypal-auth-algo',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 }
@@ -94,6 +95,83 @@ function verifyAdyenSignature(payload: string, signature: string, secret: string
   }
 }
 
+interface PayPalWebhookHeaders {
+  transmissionId: string | null;
+  transmissionTime: string | null;
+  transmissionSig: string | null;
+  certUrl: string | null;
+  authAlgo: string | null;
+}
+
+/**
+ * Verify PayPal webhook signature by calling PayPal's verification API
+ * PayPal uses asymmetric signature verification that requires calling their endpoint
+ */
+async function verifyPayPalSignature(
+  payload: string,
+  headers: PayPalWebhookHeaders,
+  webhookId: string,
+  credentials: { client_id: string; client_secret: string; environment?: 'sandbox' | 'live' }
+): Promise<boolean> {
+  if (!headers.transmissionId || !headers.transmissionSig || !webhookId) {
+    return false;
+  }
+
+  try {
+    const baseUrl = credentials.environment === 'live'
+      ? 'https://api-m.paypal.com'
+      : 'https://api-m.sandbox.paypal.com';
+
+    // Get OAuth access token
+    const auth = btoa(`${credentials.client_id}:${credentials.client_secret}`);
+    const tokenResponse = await fetch(`${baseUrl}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
+
+    if (!tokenResponse.ok) {
+      console.error('[Security] PayPal auth failed for webhook verification');
+      return false;
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // Verify webhook signature
+    const verifyResponse = await fetch(`${baseUrl}/v1/notifications/verify-webhook-signature`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        auth_algo: headers.authAlgo,
+        cert_url: headers.certUrl,
+        transmission_id: headers.transmissionId,
+        transmission_sig: headers.transmissionSig,
+        transmission_time: headers.transmissionTime,
+        webhook_id: webhookId,
+        webhook_event: JSON.parse(payload),
+      }),
+    });
+
+    if (!verifyResponse.ok) {
+      console.error('[Security] PayPal webhook verification request failed');
+      return false;
+    }
+
+    const verifyData = await verifyResponse.json();
+    return verifyData.verification_status === 'SUCCESS';
+  } catch (error) {
+    console.error('[Security] PayPal signature verification error:', error);
+    return false;
+  }
+}
+
 /**
  * Normalize Stripe webhook event
  */
@@ -151,6 +229,72 @@ function normalizeAdyenEvent(payload: Record<string, unknown>): NormalizedWebhoo
     amount: amount?.value as number,
     currency: amount?.currency as string,
     timestamp: item.eventDate as string || new Date().toISOString(),
+    raw_payload: payload,
+  }
+}
+
+/**
+ * Normalize PayPal webhook event
+ */
+function normalizePayPalEvent(payload: Record<string, unknown>): NormalizedWebhookEvent {
+  const resource = payload.resource as Record<string, unknown> || {}
+  const eventType = payload.event_type as string
+
+  // Map PayPal event types to our normalized types
+  const eventTypeMap: Record<string, string> = {
+    // Order events
+    'CHECKOUT.ORDER.APPROVED': 'payment.authorized',
+    'CHECKOUT.ORDER.COMPLETED': 'payment.captured',
+    'CHECKOUT.ORDER.VOIDED': 'payment.canceled',
+    // Capture events
+    'PAYMENT.CAPTURE.COMPLETED': 'payment.captured',
+    'PAYMENT.CAPTURE.DENIED': 'payment.failed',
+    'PAYMENT.CAPTURE.PENDING': 'payment.pending',
+    'PAYMENT.CAPTURE.REFUNDED': 'refund.succeeded',
+    'PAYMENT.CAPTURE.REVERSED': 'refund.succeeded',
+    // Authorization events
+    'PAYMENT.AUTHORIZATION.CREATED': 'payment.authorized',
+    'PAYMENT.AUTHORIZATION.VOIDED': 'payment.canceled',
+    // Refund events
+    'PAYMENT.REFUND.COMPLETED': 'refund.succeeded',
+    // Dispute events
+    'CUSTOMER.DISPUTE.CREATED': 'dispute.created',
+    'CUSTOMER.DISPUTE.RESOLVED': 'dispute.resolved',
+  }
+
+  // Extract amount - PayPal uses different structures for different events
+  let amount: number | undefined
+  let currency: string | undefined
+
+  // For orders, amount is in purchase_units[0].amount
+  const purchaseUnits = resource.purchase_units as Array<Record<string, unknown>> | undefined
+  if (purchaseUnits && purchaseUnits[0]) {
+    const amountObj = purchaseUnits[0].amount as Record<string, unknown>
+    if (amountObj) {
+      // PayPal uses decimal format (e.g., "10.00"), convert to cents
+      amount = Math.round(parseFloat(amountObj.value as string) * 100)
+      currency = (amountObj.currency_code as string)?.toUpperCase()
+    }
+  }
+
+  // For captures/refunds, amount is directly on resource
+  if (!amount && resource.amount) {
+    const amountObj = resource.amount as Record<string, unknown>
+    amount = Math.round(parseFloat(amountObj.value as string) * 100)
+    currency = (amountObj.currency_code as string)?.toUpperCase()
+  }
+
+  // Get transaction ID - could be order ID or capture ID
+  const transactionId = (resource.id || resource.supplementary_data?.related_ids?.order_id) as string
+
+  return {
+    type: eventTypeMap[eventType] || eventType,
+    psp: 'paypal',
+    psp_event_id: payload.id as string,
+    transaction_id: transactionId,
+    amount,
+    currency,
+    timestamp: (payload.create_time || payload.event_time || new Date().toISOString()) as string,
     raw_payload: payload,
   }
 }
@@ -223,6 +367,10 @@ serve(async (req) => {
     // Get webhook secrets from environment or database
     const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
     const adyenWebhookSecret = Deno.env.get('ADYEN_WEBHOOK_SECRET')
+    const paypalWebhookId = Deno.env.get('PAYPAL_WEBHOOK_ID')
+    const paypalClientId = Deno.env.get('PAYPAL_CLIENT_ID')
+    const paypalClientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
+    const paypalEnvironment = (Deno.env.get('PAYPAL_ENVIRONMENT') || 'sandbox') as 'sandbox' | 'live'
 
     // Verify signature based on PSP
     let signatureValid = false
@@ -260,6 +408,36 @@ serve(async (req) => {
           )
         }
         // Adyen expects [accepted] response
+        break
+
+      case 'paypal':
+        const paypalHeaders: PayPalWebhookHeaders = {
+          transmissionId: req.headers.get('paypal-transmission-id'),
+          transmissionTime: req.headers.get('paypal-transmission-time'),
+          transmissionSig: req.headers.get('paypal-transmission-sig'),
+          certUrl: req.headers.get('paypal-cert-url'),
+          authAlgo: req.headers.get('paypal-auth-algo'),
+        }
+
+        if (paypalWebhookId && paypalClientId && paypalClientSecret) {
+          signatureValid = await verifyPayPalSignature(
+            rawBody,
+            paypalHeaders,
+            paypalWebhookId,
+            {
+              client_id: paypalClientId,
+              client_secret: paypalClientSecret,
+              environment: paypalEnvironment,
+            }
+          )
+        }
+        normalizedEvent = normalizePayPalEvent(payload)
+        if (enforceSignatures && !signatureValid) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid webhook signature' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
         break
 
       default:
