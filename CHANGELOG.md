@@ -11,6 +11,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Authentication & Session Management
+
+- **GitHub OAuth Login**
+  - One-click sign in with GitHub
+  - OAuth callback handling with invite token support
+  - Seamless integration with existing auth flow
+
+- **Session Security**
+  - Visible logout button in dashboard header
+  - Idle timeout with 30-minute inactivity auto-logout
+  - Warning modal with countdown before session expiry
+  - "Stay logged in" option to reset timer
+
+#### Billing Engine - Real Payment Processing
+
+- **Production-Ready Invoice Charging**
+  - Wire billing engine to real payment orchestrator
+  - Automatic PSP selection via traffic splits and routing rules
+  - Smart retry with failover to alternate processors
+  - Proper idempotency keys for all charges
+
+- **Shared Payment Processor Module** (`_shared/payment-processor.ts`)
+  - Reusable `chargeToken()` function for subscription billing
+  - Handles vault token retrieval for card data
+  - Supports all 10 PSP adapters (Stripe, Adyen, Windcave, etc.)
+  - Up to 3 retry attempts with automatic failover
+
+- **Enhanced Failure Handling**
+  - Real payment failure reasons from PSPs
+  - Detailed logging for charge success/failure
+  - Failure reasons included in customer emails
+  - Billing job records track actual error messages
+
+### Changed
+
+#### Dashboard Performance Optimizations
+
+- Replace double auth check with single `getSession()` call
+- Parallel query execution in orchestration page
+- Move Supabase client creation to component level
+- Loading skeletons for improved perceived performance
+
 #### Composable Payment Form Elements (`@atlas/elements`)
 
 **Fully customizable, accessible payment form components:**
