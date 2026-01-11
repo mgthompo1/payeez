@@ -24,6 +24,7 @@ interface CreateTransferRequest {
   amount: number;
   currency?: string;
   direction: 'debit' | 'credit';
+  mandate_id?: string;  // Required for debits
   description?: string;
   statement_descriptor?: string;
   settlement_provider?: 'nacha' | 'stripe_ach' | 'dwolla';
@@ -368,6 +369,149 @@ serve(async (req) => {
         );
       }
 
+      // Check bank account verification for debits
+      if (body.direction === 'debit' && bankAccount.verification_status !== 'verified') {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'account_not_verified',
+              message: 'Bank account must be verified before debits can be initiated',
+              verification_status: bankAccount.verification_status,
+            },
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Mandate enforcement for debits
+      let validatedMandate = null;
+      if (body.direction === 'debit') {
+        if (!body.mandate_id) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'mandate_required',
+                message: 'A valid mandate_id is required for debit transfers',
+              },
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validate mandate
+        const { data: mandate, error: mandateError } = await supabase
+          .from('bank_mandates')
+          .select('*')
+          .eq('id', body.mandate_id)
+          .eq('tenant_id', auth.tenantId)
+          .eq('bank_account_id', body.bank_account_id)
+          .single();
+
+        if (mandateError || !mandate) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'mandate_not_found',
+                message: 'Mandate not found or does not match bank account',
+              },
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (mandate.status !== 'active') {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'mandate_not_active',
+                message: `Mandate is ${mandate.status}`,
+              },
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (mandate.expires_at && new Date(mandate.expires_at) < new Date()) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'mandate_expired',
+                message: 'Mandate has expired',
+              },
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check mandate authorization type
+        if (mandate.authorization_type !== 'debit' && mandate.authorization_type !== 'both') {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'mandate_not_authorized',
+                message: 'Mandate does not authorize debits',
+              },
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check amount limit
+        if (mandate.amount_limit && body.amount > mandate.amount_limit) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'exceeds_mandate_limit',
+                message: `Amount exceeds mandate limit of ${mandate.amount_limit}`,
+              },
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check daily limit
+        if (mandate.daily_limit) {
+          const { data: dailyTotal } = await supabase.rpc('get_daily_transfer_total', {
+            p_bank_account_id: body.bank_account_id,
+            p_direction: 'debit',
+          });
+
+          if ((dailyTotal || 0) + body.amount > mandate.daily_limit) {
+            return new Response(
+              JSON.stringify({
+                error: {
+                  code: 'exceeds_daily_limit',
+                  message: 'Transfer would exceed mandate daily limit',
+                },
+              }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        // Check monthly limit
+        if (mandate.monthly_limit) {
+          const { data: monthlyTotal } = await supabase.rpc('get_monthly_transfer_total', {
+            p_bank_account_id: body.bank_account_id,
+            p_direction: 'debit',
+          });
+
+          if ((monthlyTotal || 0) + body.amount > mandate.monthly_limit) {
+            return new Response(
+              JSON.stringify({
+                error: {
+                  code: 'exceeds_monthly_limit',
+                  message: 'Transfer would exceed mandate monthly limit',
+                },
+              }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        validatedMandate = mandate;
+      }
+
       // Run risk assessment
       const riskResult = await assessTransferRisk(
         supabase,
@@ -406,7 +550,8 @@ serve(async (req) => {
         .insert({
           tenant_id: auth.tenantId,
           bank_account_id: body.bank_account_id,
-          mandate_id: null, // Would be set if mandate-based
+          customer_id: bankAccount.customer_id,
+          mandate_id: validatedMandate?.id || null,
           amount: body.amount,
           currency: body.currency || bankAccount.currency || 'USD',
           direction: body.direction,

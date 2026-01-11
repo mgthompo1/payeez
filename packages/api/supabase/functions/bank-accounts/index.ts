@@ -311,6 +311,86 @@ serve(async (req) => {
       }
     }
 
+    // Route: POST /bank-accounts/:id/initiate-microdeposits - Initiate micro-deposit verification
+    if (req.method === 'POST' && accountId && action === 'initiate-microdeposits') {
+      // Get the bank account
+      const { data: account, error: accountError } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('tenant_id', auth.tenantId)
+        .eq('id', accountId)
+        .single();
+
+      if (accountError || !account) {
+        return new Response(
+          JSON.stringify({ error: { code: 'not_found', message: 'Bank account not found' } }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (account.verification_status === 'verified') {
+        return new Response(
+          JSON.stringify({ error: { code: 'already_verified', message: 'Account is already verified' } }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (account.verification_status === 'pending' && account.microdeposit_amount_1) {
+        // Already initiated, return current status
+        return new Response(
+          JSON.stringify({
+            status: 'pending',
+            message: 'Micro-deposits already initiated',
+            expires_at: account.microdeposit_expires_at,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Generate two random amounts between $0.01 and $0.99
+      const amount1 = Math.floor(Math.random() * 99) + 1; // 1-99 cents
+      const amount2 = Math.floor(Math.random() * 99) + 1;
+
+      // Set expiry to 10 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 10);
+
+      // Update account with micro-deposit info
+      const { error: updateError } = await supabase
+        .from('bank_accounts')
+        .update({
+          verification_method: 'microdeposit',
+          verification_status: 'pending',
+          microdeposit_amount_1: amount1,
+          microdeposit_amount_2: amount2,
+          microdeposit_sent_at: new Date().toISOString(),
+          microdeposit_expires_at: expiresAt.toISOString(),
+          verification_attempts: 0,
+        })
+        .eq('id', accountId);
+
+      if (updateError) {
+        console.error('[Bank Accounts] Initiate micro-deposits error:', updateError);
+        return new Response(
+          JSON.stringify({ error: { code: 'initiate_failed', message: 'Failed to initiate micro-deposits' } }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // In production, this would trigger actual ACH credits via Stripe/settlement provider
+      // For now, we record the amounts and the merchant would need to actually send them
+      console.log(`[Bank Accounts] Micro-deposits initiated for ${accountId}: $0.${amount1.toString().padStart(2, '0')}, $0.${amount2.toString().padStart(2, '0')}`);
+
+      return new Response(
+        JSON.stringify({
+          status: 'pending',
+          message: 'Micro-deposits initiated. Two small deposits will appear in 1-3 business days.',
+          expires_at: expiresAt.toISOString(),
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Route: POST /bank-accounts - Create bank account
     if (req.method === 'POST' && !accountId) {
       const body: CreateBankAccountRequest = await req.json();

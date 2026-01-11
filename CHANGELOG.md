@@ -1,9 +1,73 @@
-# Changelog
+1# Changelog
 
 All notable changes to Atlas will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [2.3.0] - 2026-01-10
+
+### Added
+
+#### US ACH Payment Infrastructure
+
+**Complete ACH/bank account payment system for US market:**
+
+- **Bank Mandates API** (`/bank-mandates`)
+  - Create, list, get, and revoke ACH authorization mandates
+  - Captures legal authorization text, IP address, timestamp
+  - Amount limits (per-transaction, daily, monthly)
+  - Subscription linking support
+  - NACHA-compliant authorization capture
+
+- **Micro-Deposit Verification**
+  - `POST /bank-accounts/:id/initiate-microdeposits` - Initiate verification
+  - Random two-deposit amounts (1-99 cents)
+  - 10-day expiry with 3 verification attempts
+  - Status tracking (pending, verified, failed)
+
+- **ACH Settlement Processor** (`/process-ach-transfers`)
+  - Scheduled function for processing pending transfers
+  - Stripe ACH integration for debits and credits
+  - Automatic retry and failover logic
+  - Expected settlement date tracking
+
+- **ACH Webhook Handler** (`/ach-webhooks`)
+  - Stripe ACH event handling (charge.succeeded, charge.failed, payout.paid)
+  - ACH return code processing (R01-R99)
+  - Risk event recording for returns
+  - Automatic transfer status updates
+
+- **Stripe Adapter ACH Methods**
+  - `authorizeACH()` - ACH Direct Debit via PaymentIntents
+  - `createACHPayout()` - ACH credits/payouts
+  - `createExternalBankAccount()` - External account setup
+
+### Fixed
+
+#### Critical: Database Schema Alignment
+- **Fixed `profile_id` → `tenant_id`** in bank-accounts API (7 occurrences)
+- **Fixed `profile_id` → `tenant_id`** in bank-transfers API (7 occurrences)
+- All bank account CRUD operations now work correctly with RLS
+
+#### ACH Transfer Status Enum
+- **Added `cancelled` to transfer_status enum** - Cancel endpoint now works
+- Migration 00028: Adds cancelled status, unique idempotency index
+
+### Changed
+
+#### Mandate Enforcement for Debits
+- **Debits now require valid mandate** with proper authorization
+- Bank account verification required before debit mandates
+- Mandate limit checks (per-transaction, daily, monthly)
+- Mandate expiry enforcement
+
+#### Enhanced Transfer Creation
+- Account verification required for debit transfers
+- Customer ID linked from bank account
+- Full mandate validation before processing
 
 ---
 

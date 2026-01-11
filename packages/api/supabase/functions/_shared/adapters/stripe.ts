@@ -273,4 +273,189 @@ export const stripeAdapter = {
       return false;
     }
   },
+
+  /**
+   * Authorize ACH bank account payment
+   * Uses Stripe's ACH Direct Debit via PaymentIntents
+   */
+  async authorizeACH(
+    req: {
+      amount: number;
+      currency: string;
+      bankAccountToken: string; // Stripe bank account token
+      idempotencyKey: string;
+      customerEmail?: string;
+      metadata?: Record<string, string>;
+      mandateData?: {
+        ip_address: string;
+        user_agent: string;
+      };
+    },
+    credentials: { secret_key: string }
+  ): Promise<AuthorizeResponse> {
+    const stripe = new Stripe(credentials.secret_key, {
+      apiVersion: '2023-10-16',
+    });
+
+    try {
+      // Create PaymentIntent with ACH Direct Debit
+      const paymentIntent = await stripe.paymentIntents.create(
+        {
+          amount: req.amount,
+          currency: req.currency.toLowerCase(),
+          payment_method_types: ['us_bank_account'],
+          payment_method_data: {
+            type: 'us_bank_account',
+            us_bank_account: {
+              account_holder_type: 'individual',
+            },
+            billing_details: {
+              email: req.customerEmail,
+            },
+          },
+          confirm: true,
+          mandate_data: req.mandateData ? {
+            customer_acceptance: {
+              type: 'online',
+              online: {
+                ip_address: req.mandateData.ip_address,
+                user_agent: req.mandateData.user_agent,
+              },
+            },
+          } : undefined,
+          receipt_email: req.customerEmail,
+          metadata: req.metadata,
+        },
+        {
+          idempotencyKey: req.idempotencyKey,
+        }
+      );
+
+      // ACH payments are typically in 'processing' state after confirmation
+      const isSuccess =
+        paymentIntent.status === 'succeeded' ||
+        paymentIntent.status === 'processing' ||
+        paymentIntent.status === 'requires_action';
+
+      return {
+        success: isSuccess,
+        transactionId: paymentIntent.id,
+        status: paymentIntent.status === 'succeeded' ? 'captured' : 'authorized',
+        rawResponse: paymentIntent,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        transactionId: '',
+        status: 'failed',
+        failureCode: error.code || 'stripe_ach_error',
+        failureMessage: error.message || 'ACH payment failed',
+        rawResponse: error,
+      };
+    }
+  },
+
+  /**
+   * Create a Stripe ACH payout (credit to external bank account)
+   */
+  async createACHPayout(
+    req: {
+      amount: number;
+      currency: string;
+      destinationBankAccountId: string; // Stripe external account ID
+      idempotencyKey: string;
+      description?: string;
+      metadata?: Record<string, string>;
+    },
+    credentials: { secret_key: string }
+  ): Promise<AuthorizeResponse> {
+    const stripe = new Stripe(credentials.secret_key, {
+      apiVersion: '2023-10-16',
+    });
+
+    try {
+      const payout = await stripe.payouts.create(
+        {
+          amount: req.amount,
+          currency: req.currency.toLowerCase(),
+          destination: req.destinationBankAccountId,
+          method: 'standard', // 'instant' for instant payouts
+          description: req.description,
+          metadata: req.metadata,
+        },
+        {
+          idempotencyKey: req.idempotencyKey,
+        }
+      );
+
+      return {
+        success: payout.status === 'paid' || payout.status === 'pending' || payout.status === 'in_transit',
+        transactionId: payout.id,
+        status: payout.status === 'paid' ? 'captured' : 'authorized',
+        rawResponse: payout,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        transactionId: '',
+        status: 'failed',
+        failureCode: error.code || 'stripe_payout_error',
+        failureMessage: error.message || 'Payout failed',
+        rawResponse: error,
+      };
+    }
+  },
+
+  /**
+   * Create a Stripe external bank account for payouts
+   */
+  async createExternalBankAccount(
+    bankData: {
+      account_number: string;
+      routing_number: string;
+      account_holder_name: string;
+      account_holder_type: 'individual' | 'company';
+    },
+    credentials: { secret_key: string },
+    idempotencyKey: string
+  ): Promise<{ success: boolean; externalAccountId?: string; error?: string }> {
+    try {
+      const response = await fetch('https://api.stripe.com/v1/accounts/self/external_accounts', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${credentials.secret_key}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: new URLSearchParams({
+          'external_account[object]': 'bank_account',
+          'external_account[country]': 'US',
+          'external_account[currency]': 'usd',
+          'external_account[account_holder_name]': bankData.account_holder_name,
+          'external_account[account_holder_type]': bankData.account_holder_type,
+          'external_account[routing_number]': bankData.routing_number,
+          'external_account[account_number]': bankData.account_number,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        return {
+          success: false,
+          error: data.error.message,
+        };
+      }
+
+      return {
+        success: true,
+        externalAccountId: data.id,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to create external bank account',
+      };
+    }
+  },
 };
