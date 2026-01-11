@@ -63,6 +63,9 @@ export interface ACHSettlementRequest {
   metadata?: Record<string, string>;
   // For credits: destination account details
   destinationAccount?: ACHBankAccount;
+  // Provider-specific payment method ID (from verified SetupIntent/Financial Connections)
+  // When present, use this instead of raw bank account data
+  providerPaymentMethodId?: string;
 }
 
 // Response from settlement attempt
@@ -95,9 +98,19 @@ export interface ACHVerificationResponse {
   sessionId?: string;
   // For instant verification
   verifiedAt?: string;
-  // Provider reference
+  // Provider reference (SetupIntent ID, session ID, etc.)
   providerRef?: string;
+  // Provider payment method ID (for reuse in debits)
+  paymentMethodId?: string;
   // Error details
+  error?: string;
+}
+
+// Verification completion response
+export interface ACHVerifyResult {
+  success: boolean;
+  // Payment method ID from verified SetupIntent
+  paymentMethodId?: string;
   error?: string;
 }
 
@@ -158,16 +171,17 @@ export interface ACHAdapter {
 
   /**
    * Complete verification (for micro-deposits)
-   * Returns true if verification successful
+   * Returns verification result with payment method ID
    */
   verifyMicroDeposits(
     bankAccountId: string,
     amounts: [number, number],
     credentials: Record<string, string>
-  ): Promise<{ success: boolean; error?: string }>;
+  ): Promise<ACHVerifyResult>;
 
   /**
-   * Check verification status (for async methods)
+   * Check verification status (for async methods like provider-managed micro-deposits)
+   * Returns payment method ID when verified
    */
   checkVerificationStatus?(
     providerRef: string,
@@ -175,6 +189,7 @@ export interface ACHAdapter {
   ): Promise<{
     status: 'pending' | 'verified' | 'failed';
     verifiedAt?: string;
+    paymentMethodId?: string;
     error?: string;
   }>;
 

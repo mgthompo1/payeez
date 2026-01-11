@@ -17,7 +17,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
 import { authenticateApiKey, buildCorsHeaders } from '../_shared/auth.ts';
-import { initiateVerification, verifyMicroDeposits } from '../_shared/ach/index.ts';
+import { initiateVerification, verifyMicroDeposits, checkVerificationStatus } from '../_shared/ach/index.ts';
 
 // ============================================
 // Types
@@ -244,7 +244,61 @@ serve(async (req) => {
         );
       }
 
-      if (!account.microdeposit_amount_1 || !account.microdeposit_amount_2) {
+      // Provider-managed verification: check provider status first
+      // This supports cases where the provider sends micro-deposits and we don't know the amounts
+      if (account.verification_evidence_ref && !body.amounts) {
+        // Check verification status via provider
+        const statusResult = await checkVerificationStatus(
+          account.verification_evidence_ref,
+          auth.tenantId,
+          supabase
+        );
+
+        if (statusResult.status === 'verified') {
+          // Provider verified the account - update our records
+          await supabase
+            .from('bank_accounts')
+            .update({
+              verification_status: 'verified',
+              verification_strength: 'basic',
+              verified_at: statusResult.verifiedAt || new Date().toISOString(),
+              provider_payment_method_id: statusResult.paymentMethodId,
+            })
+            .eq('id', accountId);
+
+          return new Response(
+            JSON.stringify({ verified: true, payment_method_id: statusResult.paymentMethodId }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else if (statusResult.status === 'failed') {
+          await supabase
+            .from('bank_accounts')
+            .update({ verification_status: 'failed' })
+            .eq('id', accountId);
+
+          return new Response(
+            JSON.stringify({ verified: false, error: { code: 'verification_failed', message: statusResult.error || 'Provider verification failed' } }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else {
+          // Still pending
+          return new Response(
+            JSON.stringify({ verified: false, status: 'pending', message: 'Verification still pending with provider' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      // For amount-based verification, require amounts
+      if (!body.amounts || !Array.isArray(body.amounts) || body.amounts.length !== 2) {
+        return new Response(
+          JSON.stringify({ error: { code: 'invalid_amounts', message: 'Two micro-deposit amounts required' } }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // For local verification, require local amounts to be stored
+      if (!account.verification_evidence_ref && (!account.microdeposit_amount_1 || !account.microdeposit_amount_2)) {
         return new Response(
           JSON.stringify({ error: { code: 'not_initiated', message: 'Micro-deposits not initiated' } }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -262,6 +316,7 @@ serve(async (req) => {
       const attempts = (account.verification_attempts || 0) + 1;
       const maxAttempts = 3;
       let isCorrect = false;
+      let paymentMethodId: string | undefined;
 
       // If we have a provider reference (e.g., Stripe SetupIntent), verify through the provider
       if (account.verification_evidence_ref) {
@@ -274,6 +329,7 @@ serve(async (req) => {
 
         if (verifyResult.success) {
           isCorrect = true;
+          paymentMethodId = verifyResult.paymentMethodId;
         } else if (verifyResult.error) {
           // Provider-specific verification failure
           console.log(`[Bank Accounts] Provider verification failed: ${verifyResult.error}`);
@@ -300,6 +356,7 @@ serve(async (req) => {
             verification_strength: 'basic', // Micro-deposits are basic verification
             verified_at: new Date().toISOString(),
             verification_attempts: attempts,
+            provider_payment_method_id: paymentMethodId,
           })
           .eq('id', accountId);
 

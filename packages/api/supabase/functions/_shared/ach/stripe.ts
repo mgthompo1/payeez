@@ -165,34 +165,46 @@ export const stripeACHAdapter: ACHAdapter = {
         },
       } : undefined;
 
+      // Build payment intent body - prefer stored payment method if available
+      const body: Record<string, unknown> = {
+        amount: req.amount,
+        currency: req.currency.toLowerCase(),
+        payment_method_types: ['us_bank_account'],
+        mandate_data: mandateData,
+        confirm: true,
+        statement_descriptor: req.statementDescriptor?.slice(0, 22),
+        metadata: {
+          atlas_transfer_id: req.transferId,
+          ...(req.metadata || {}),
+        },
+      };
+
+      // Use stored payment method ID (from verified SetupIntent) if available
+      // This preserves verification state and is the recommended approach
+      if (req.providerPaymentMethodId) {
+        body.payment_method = req.providerPaymentMethodId;
+      } else {
+        // Fall back to creating payment method from raw data
+        // This works but loses provider verification linkage
+        body.payment_method_data = {
+          type: 'us_bank_account',
+          us_bank_account: {
+            account_holder_type: req.bankAccount.accountHolderType,
+            account_type: req.bankAccount.accountType,
+            routing_number: req.bankAccount.routingNumber,
+            account_number: req.bankAccount.accountNumber,
+          },
+          billing_details: {
+            name: req.bankAccount.accountHolderName,
+          },
+        };
+      }
+
       // Create PaymentIntent with us_bank_account
       const paymentIntent = await stripeRequest('/payment_intents', creds, {
         method: 'POST',
         idempotencyKey: req.idempotencyKey,
-        body: {
-          amount: req.amount,
-          currency: req.currency.toLowerCase(),
-          payment_method_types: ['us_bank_account'],
-          payment_method_data: {
-            type: 'us_bank_account',
-            us_bank_account: {
-              account_holder_type: req.bankAccount.accountHolderType,
-              account_type: req.bankAccount.accountType,
-              routing_number: req.bankAccount.routingNumber,
-              account_number: req.bankAccount.accountNumber,
-            },
-            billing_details: {
-              name: req.bankAccount.accountHolderName,
-            },
-          },
-          mandate_data: mandateData,
-          confirm: true,
-          statement_descriptor: req.statementDescriptor?.slice(0, 22),
-          metadata: {
-            atlas_transfer_id: req.transferId,
-            ...(req.metadata || {}),
-          },
-        },
+        body,
       }) as {
         id: string;
         status: string;
@@ -407,19 +419,23 @@ export const stripeACHAdapter: ACHAdapter = {
     bankAccountId: string, // This should be the SetupIntent ID from initiateVerification
     amounts: [number, number],
     credentials: Record<string, string>
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; paymentMethodId?: string; error?: string }> {
     try {
       const creds = credentials as unknown as StripeCredentials;
 
       // Verify the micro-deposits on the SetupIntent
-      await stripeRequest(`/setup_intents/${bankAccountId}/verify_microdeposits`, creds, {
+      const verifyResult = await stripeRequest(`/setup_intents/${bankAccountId}/verify_microdeposits`, creds, {
         method: 'POST',
         body: {
           amounts: amounts, // e.g., [32, 45] for $0.32 and $0.45
         },
-      });
+      }) as { payment_method: string };
 
-      return { success: true };
+      // Return the payment method ID from the verified SetupIntent
+      return {
+        success: true,
+        paymentMethodId: verifyResult.payment_method,
+      };
     } catch (error: unknown) {
       const err = error as Error;
       return {
@@ -435,6 +451,7 @@ export const stripeACHAdapter: ACHAdapter = {
   ): Promise<{
     status: 'pending' | 'verified' | 'failed';
     verifiedAt?: string;
+    paymentMethodId?: string;
     error?: string;
   }> {
     try {
@@ -444,12 +461,13 @@ export const stripeACHAdapter: ACHAdapter = {
       if (providerRef.startsWith('seti_')) {
         const setupIntent = await stripeRequest(`/setup_intents/${providerRef}`, creds, {
           method: 'GET',
-        }) as { status: string };
+        }) as { status: string; payment_method: string | null };
 
         return {
           status: setupIntent.status === 'succeeded' ? 'verified' :
                   setupIntent.status === 'canceled' ? 'failed' : 'pending',
           verifiedAt: setupIntent.status === 'succeeded' ? new Date().toISOString() : undefined,
+          paymentMethodId: setupIntent.payment_method || undefined,
         };
       } else if (providerRef.startsWith('fcsess_')) {
         const session = await stripeRequest(`/financial_connections/sessions/${providerRef}`, creds, {

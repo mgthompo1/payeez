@@ -78,6 +78,9 @@ ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS verification_strength TEXT
   CHECK (verification_strength IS NULL OR verification_strength IN ('basic', 'strong'));
 ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
 ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS verification_evidence_ref TEXT;
+-- Provider payment method ID (from verified SetupIntent/Financial Connections)
+-- Use this for debits to preserve verification state
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS provider_payment_method_id TEXT;
 
 -- Indexes for efficient lookups
 CREATE INDEX idx_bta_transfer ON bank_transfer_attempts(transfer_id);

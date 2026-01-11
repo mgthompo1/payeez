@@ -97,7 +97,8 @@ serve(async (req) => {
           vault_token,
           tenant_id,
           holder_name,
-          account_type
+          account_type,
+          provider_payment_method_id
         ),
         bank_mandates (
           id,
@@ -201,12 +202,18 @@ serve(async (req) => {
           idempotencyKey,
           description: transfer.statement_descriptor || transfer.internal_description,
           metadata: transfer.metadata,
+          // Use stored payment method ID if available (preserves verification state)
+          providerPaymentMethodId: transfer.bank_accounts.provider_payment_method_id || undefined,
         };
 
-        // Execute through the ACH orchestrator
+        // Execute through the ACH orchestrator with the transfer's chosen provider
         const { response, routing } = transfer.direction === 'debit'
-          ? await executeACHDebit(settlementRequest, transfer.tenant_id, supabase)
-          : await executeACHCredit(settlementRequest, transfer.tenant_id, supabase);
+          ? await executeACHDebit(settlementRequest, transfer.tenant_id, supabase, {
+              preferredProvider: transfer.settlement_provider,
+            })
+          : await executeACHCredit(settlementRequest, transfer.tenant_id, supabase, {
+              preferredProvider: transfer.settlement_provider,
+            });
 
         // Update the attempt with the result
         await supabase

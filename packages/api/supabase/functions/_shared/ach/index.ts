@@ -314,7 +314,7 @@ export async function verifyMicroDeposits(
   tenantId: string,
   supabase: SupabaseClient,
   provider: ACHProviderName = 'stripe_ach'
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; paymentMethodId?: string; error?: string }> {
   // Get credentials
   const credentials = await getACHCredentials(tenantId, supabase, provider);
   if (!credentials) {
@@ -324,4 +324,33 @@ export async function verifyMicroDeposits(
   // Execute through adapter
   const adapter = getAdapter(provider);
   return adapter.verifyMicroDeposits(bankAccountProviderRef, amounts, credentials);
+}
+
+/**
+ * Check verification status via provider (for provider-managed verification)
+ */
+export async function checkVerificationStatus(
+  providerRef: string,
+  tenantId: string,
+  supabase: SupabaseClient,
+  provider: ACHProviderName = 'stripe_ach'
+): Promise<{
+  status: 'pending' | 'verified' | 'failed';
+  verifiedAt?: string;
+  paymentMethodId?: string;
+  error?: string;
+}> {
+  // Get credentials
+  const credentials = await getACHCredentials(tenantId, supabase, provider);
+  if (!credentials) {
+    return { status: 'failed', error: `No active credentials for ${provider}` };
+  }
+
+  // Execute through adapter
+  const adapter = getAdapter(provider);
+  if (!adapter.checkVerificationStatus) {
+    return { status: 'pending', error: 'Provider does not support status check' };
+  }
+
+  return adapter.checkVerificationStatus(providerRef, credentials);
 }
