@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { CodeBlock, MultiLanguageCodeBlock, ApiExplorer, DocSearch } from '@/components/docs'
+import { CodeBlock, MultiLanguageCodeBlock, ApiExplorer, DocSearch, ApiPlayground, ApiPlaygroundTrigger } from '@/components/docs'
 import {
   Terminal,
   Code2,
@@ -138,6 +138,7 @@ function SectionHeader({ icon: Icon, title, description }: { icon: any; title: s
 
 export default function DocsPage() {
   const [activeTab, setActiveTab] = useState('quickstart')
+  const [playgroundOpen, setPlaygroundOpen] = useState(false)
 
   const tabs = [
     { id: 'quickstart', label: 'Quick Start', icon: Terminal },
@@ -163,7 +164,7 @@ export default function DocsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="dashboard-heading text-2xl">API Documentation</h1>
+          <h1 className="dashboard-heading text-2xl">API Reference</h1>
           <p className="text-slate-500 mt-1">Complete reference for the Atlas API</p>
         </div>
         <div className="flex items-center gap-2">
@@ -3063,6 +3064,15 @@ window.location.href = url;`} />
       )}
         </div>
       </div>
+
+      {/* Floating API Playground Button */}
+      <ApiPlaygroundTrigger onClick={() => setPlaygroundOpen(true)} />
+
+      {/* API Playground Overlay */}
+      <ApiPlayground
+        isOpen={playgroundOpen}
+        onClose={() => setPlaygroundOpen(false)}
+      />
     </div>
   )
 }

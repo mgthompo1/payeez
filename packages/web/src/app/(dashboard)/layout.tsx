@@ -26,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { IdleTimeout } from '@/components/IdleTimeout'
 
 interface NavSection {
   title?: string
@@ -64,7 +65,7 @@ const navigationSections: NavSection[] = [
     title: 'Developers',
     items: [
       { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
-      { name: 'Docs', href: '/dashboard/docs', icon: BookOpen },
+      { name: 'API', href: '/dashboard/docs', icon: BookOpen },
     ]
   },
   {
@@ -199,6 +200,16 @@ export default async function DashboardLayout({
             <div className="h-4 w-px bg-white/10"></div>
             <div className="text-[10px] font-mono text-slate-500">us-east-1</div>
             <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] status-dot"></div>
+            <div className="h-4 w-px bg-white/10"></div>
+            <form action="/auth/signout" method="POST">
+              <button
+                type="submit"
+                className="flex items-center gap-2 text-slate-400 hover:text-red-400 transition-colors text-xs"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </form>
           </div>
         </header>
 
@@ -207,6 +218,9 @@ export default async function DashboardLayout({
            {children}
         </div>
       </main>
+
+      {/* Idle timeout warning */}
+      <IdleTimeout warningTime={25 * 60 * 1000} logoutTime={30 * 60 * 1000} />
     </div>
   )
 }
