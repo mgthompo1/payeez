@@ -293,36 +293,46 @@ const session = await response.json();
               </p>
               <CodeBlock title="Client - React" language="tsx" code={`import { Atlas } from '@atlas/sdk';
 
-function CheckoutPage({ sessionId, clientSecret }) {
+// Initialize once at app startup
+Atlas.init({
+  publishableKey: 'pk_test_xxx', // Your publishable key
+  environment: 'sandbox',        // 'sandbox' or 'production'
+});
+
+function CheckoutPage({ clientSecret }) {
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
+    // Mount the payment form with the client_secret from your server
     Atlas.mount({
-      sessionId,
-      clientSecret,
       elementId: 'payment-form',
+      clientSecret, // From create-session response
       appearance: {
-        theme: 'dark',
+        theme: 'night',
         variables: {
           colorPrimary: '#8b5cf6',
           borderRadius: '8px'
         }
       },
-      onReady: () => {
-        console.log('Payment form ready');
-      },
+      onReady: () => console.log('Payment form ready'),
       onSuccess: (payment) => {
-        console.log('Payment successful:', payment.id);
+        // Payment completed! Redirect to success page
         window.location.href = '/success?payment=' + payment.id;
       },
       onError: (error) => {
-        console.error('Payment failed:', error.message);
         setError(error.message);
       }
     });
 
     return () => Atlas.unmount();
-  }, [sessionId, clientSecret]);
+  }, [clientSecret]);
 
-  return <div id="payment-form" />;
+  return (
+    <div>
+      {error && <p className="text-red-500">{error}</p>}
+      <div id="payment-form" />
+    </div>
+  );
 }`}
               />
             </div>
@@ -639,6 +649,39 @@ $response = curl_exec($ch);`
             </p>
           </div>
 
+          {/* Payment Flow Diagram */}
+          <div className="rounded-xl dashboard-card border border-white/10 p-6">
+            <h4 className="font-semibold text-white mb-4">Payment Flow</h4>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-[10px] font-bold text-green-400">1</div>
+                <span className="text-green-400">Create Session</span>
+                <span className="text-slate-500 text-xs">(Server)</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-600 hidden sm:block" />
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-400">2</div>
+                <span className="text-blue-400">Mount Form</span>
+                <span className="text-slate-500 text-xs">(Client SDK)</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-600 hidden sm:block" />
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-400">3</div>
+                <span className="text-purple-400">Confirm</span>
+                <span className="text-slate-500 text-xs">(Automatic)</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-600 hidden sm:block" />
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                <div className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-[10px] font-bold text-cyan-400">4</div>
+                <span className="text-cyan-400">Capture</span>
+                <span className="text-slate-500 text-xs">(Optional)</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-3">
+              Card data is collected securely via the SDK and never touches your servers.
+            </p>
+          </div>
+
           <EndpointCard method="POST" path="/create-session" description="Create a payment session" defaultExpanded>
             <div className="space-y-6 mt-4">
               <div>
@@ -835,6 +878,28 @@ curl_close($ch);`
                   metadata: { plan: "premium" }
                 }}
               />
+
+              {/* Next Step Callout */}
+              <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-600/10 border border-cyan-500/20">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <ChevronRight className="h-4 w-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white text-sm">Next Step: Mount the Payment Form</h4>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Use the <code className="text-cyan-400">client_secret</code> from the response to mount the payment form on your frontend.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('sdk')}
+                      className="mt-3 inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                    >
+                      View SDK Reference
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </EndpointCard>
 
@@ -1564,29 +1629,26 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-white/5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <code className="text-sm text-cyan-400">Atlas.configure(options)</code>
-                  <Badge variant="outline" className="text-xs">Optional</Badge>
+                  <code className="text-sm text-cyan-400">Atlas.init(config)</code>
+                  <Badge variant="outline" className="text-xs border-green-500/30 text-green-400">Required</Badge>
                 </div>
-                <p className="text-sm text-slate-400">Configure the SDK globally. Call before other methods.</p>
-                <CodeBlock language="typescript" code={`Atlas.configure({
-  environment: 'production', // 'sandbox' | 'production'
-  locale: 'en-US',
-  resilience: {
-    enableFallback: true,
-    fallbackEndpoints: ['https://fallback.atlas.co'],
-    circuitBreakerThreshold: 5
-  }
+                <p className="text-sm text-slate-400">Initialize the SDK. Call once at app startup before other methods.</p>
+                <CodeBlock language="typescript" code={`Atlas.init({
+  publishableKey: 'pk_test_xxx', // Your publishable key
+  environment: 'sandbox',        // 'sandbox' | 'production'
+  locale: 'en',                  // Optional
 });`}
                 />
+                <ParamTable params={[ { name: 'publishableKey', type: 'string', required: true, description: 'Your publishable API key (pk_test_xxx or pk_live_xxx)' }, { name: 'environment', type: 'string', description: '"sandbox" for testing, "production" for live payments' }, { name: 'apiUrl', type: 'string', description: 'Custom API URL for self-hosted deployments' }, { name: 'elementsUrl', type: 'string', description: 'Custom Elements URL for self-hosted deployments' }, { name: 'locale', type: 'string', description: 'Locale for UI strings (default: "en")' }, ]} />
               </div>
 
               <div className="p-4 rounded-lg bg-white/5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <code className="text-sm text-cyan-400">Atlas.mount(config)</code>
-                  <Badge variant="outline" className="text-xs">Required</Badge>
+                  <code className="text-sm text-cyan-400">Atlas.mount(options)</code>
+                  <Badge variant="outline" className="text-xs border-green-500/30 text-green-400">Required</Badge>
                 </div>
-                <p className="text-sm text-slate-400">Mount the payment form in a DOM element.</p>
-                <ParamTable params={[ { name: 'sessionId', type: 'string', required: true, description: 'Payment session ID from your server' }, { name: 'clientSecret', type: 'string', required: true, description: 'Client secret from session creation' }, { name: 'elementId', type: 'string', required: true, description: 'DOM element ID to mount into' }, { name: 'appearance', type: 'object', description: 'Styling options (theme, variables, rules)' }, { name: 'paymentMethods', type: 'array', description: 'Enabled methods: ["card", "apple_pay", "google_pay"]' }, { name: 'onReady', type: 'function', description: 'Called when form is ready' }, { name: 'onSuccess', type: 'function', description: 'Called with payment object on success' }, { name: 'onError', type: 'function', description: 'Called with error object on failure' }, { name: 'onValidationChange', type: 'function', description: 'Called when form validation changes' }, ]} />
+                <p className="text-sm text-slate-400">Mount the payment form (Drop-in) in a DOM element.</p>
+                <ParamTable params={[ { name: 'elementId', type: 'string', required: true, description: 'DOM element ID to mount into' }, { name: 'clientSecret', type: 'string', required: true, description: 'Client secret from create-session response' }, { name: 'appearance', type: 'object', description: 'Styling options (theme, variables, rules)' }, { name: 'layout', type: 'string', description: '"tabs" or "accordion" layout style' }, { name: 'paymentMethodTypes', type: 'array', description: 'Payment methods to show: ["card", "apple_pay", "google_pay"]' }, { name: 'onReady', type: 'function', description: 'Called when form is ready' }, { name: 'onSuccess', type: 'function', description: 'Called with Payment object on success' }, { name: 'onError', type: 'function', description: 'Called with AtlasError on failure' }, { name: 'onChange', type: 'function', description: 'Called when form validation changes' }, ]} />
               </div>
 
               <div className="p-4 rounded-lg bg-white/5 space-y-3">
@@ -1603,6 +1665,271 @@ function verifyWebhook(payload: string, signature: string, timestamp: string, se
 });`}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Hosted Fields */}
+          <div className="rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <CreditCard className="h-4 w-4 text-purple-400" />
+              </div>
+              <h3 className="font-semibold text-white">Hosted Fields (Individual Elements)</h3>
+            </div>
+            <p className="text-sm text-slate-400">
+              For custom payment form designs, use Hosted Fields to mount individual card input elements.
+              Each field is rendered in a secure iframe while giving you full control over layout and styling.
+            </p>
+          </div>
+
+          <div className="rounded-xl dashboard-card border border-white/10 p-6 space-y-6">
+            <h3 className="font-semibold text-white">Hosted Fields Setup</h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Create individual card input elements for maximum design flexibility. The SDK handles PCI compliance
+              by rendering each field in a secure iframe.
+            </p>
+
+            <CodeBlock title="Creating Hosted Fields" language="tsx" code={`import { Atlas } from '@atlas/sdk';
+
+// Initialize SDK first
+Atlas.init({ publishableKey: 'pk_test_xxx' });
+
+// Create elements instance with your client secret
+const elements = await Atlas.elements({
+  clientSecret: 'cs_xxx' // From create-session response
+});
+
+// Create individual card elements
+const cardNumber = elements.create('cardNumber', {
+  placeholder: '1234 5678 9012 3456',
+  showIcon: true,
+  iconPosition: 'right'
+});
+
+const cardExpiry = elements.create('cardExpiry', {
+  placeholder: 'MM / YY'
+});
+
+const cardCvc = elements.create('cardCvc', {
+  placeholder: 'CVC'
+});
+
+const cardHolder = elements.create('cardHolder', {
+  placeholder: 'Name on card'
+});
+
+// Mount to your DOM elements
+cardNumber.mount('#card-number');
+cardExpiry.mount('#card-expiry');
+cardCvc.mount('#card-cvc');
+cardHolder.mount('#cardholder-name');`}
+            />
+          </div>
+
+          <div className="rounded-xl dashboard-card border border-white/10 p-6 space-y-6">
+            <h3 className="font-semibold text-white">Element Types</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-white/5 space-y-2">
+                <code className="text-sm text-cyan-400">cardNumber</code>
+                <p className="text-xs text-slate-400">Card number input with automatic formatting and brand detection. Displays card brand icon.</p>
+              </div>
+              <div className="p-4 rounded-lg bg-white/5 space-y-2">
+                <code className="text-sm text-cyan-400">cardExpiry</code>
+                <p className="text-xs text-slate-400">Expiration date input with MM/YY formatting.</p>
+              </div>
+              <div className="p-4 rounded-lg bg-white/5 space-y-2">
+                <code className="text-sm text-cyan-400">cardCvc</code>
+                <p className="text-xs text-slate-400">CVC/CVV security code input (3-4 digits).</p>
+              </div>
+              <div className="p-4 rounded-lg bg-white/5 space-y-2">
+                <code className="text-sm text-cyan-400">cardHolder</code>
+                <p className="text-xs text-slate-400">Cardholder name input for billing details.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl dashboard-card border border-white/10 p-6 space-y-6">
+            <h3 className="font-semibold text-white">Element Events</h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Subscribe to events on each element to handle validation, focus states, and errors.
+            </p>
+
+            <CodeBlock title="Handling Events" language="typescript" code={`// Listen for changes (validation state)
+cardNumber.on('change', (event) => {
+  if (event.complete) {
+    console.log('Card number is valid');
+    console.log('Card brand:', event.brand); // 'visa', 'mastercard', etc.
+  }
+  if (event.error) {
+    showError(event.error.message);
+  }
+});
+
+// Focus and blur events for styling
+cardNumber.on('focus', () => {
+  document.getElementById('card-number').classList.add('focused');
+});
+
+cardNumber.on('blur', () => {
+  document.getElementById('card-number').classList.remove('focused');
+});
+
+// Ready event - field is mounted and interactive
+cardNumber.on('ready', () => {
+  console.log('Card number field ready');
+});
+
+// Error events
+cardNumber.on('error', (error) => {
+  console.error('Card number error:', error.message);
+});`}
+            />
+          </div>
+
+          <div className="rounded-xl dashboard-card border border-white/10 p-6 space-y-6">
+            <h3 className="font-semibold text-white">Element Methods</h3>
+            <ParamTable params={[
+              { name: 'mount(elementId)', type: 'function', description: 'Mount element to a DOM element by ID' },
+              { name: 'unmount()', type: 'function', description: 'Remove element from DOM and clean up' },
+              { name: 'focus()', type: 'function', description: 'Focus the input field' },
+              { name: 'blur()', type: 'function', description: 'Remove focus from the input field' },
+              { name: 'clear()', type: 'function', description: 'Clear the input value' },
+              { name: 'update(options)', type: 'function', description: 'Update element options (placeholder, disabled)' },
+              { name: 'on(event, handler)', type: 'function', description: 'Subscribe to events: ready, change, focus, blur, error' },
+              { name: 'off(event, handler?)', type: 'function', description: 'Unsubscribe from events' },
+            ]} />
+          </div>
+
+          <div className="rounded-xl dashboard-card border border-white/10 p-6 space-y-6">
+            <h3 className="font-semibold text-white">Submitting Payment</h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Use the elements instance to tokenize card data and confirm the payment.
+            </p>
+
+            <CodeBlock title="Confirm Payment" language="typescript" code={`// Option 1: Tokenize first, then confirm
+const token = await elements.createToken();
+console.log('Token created:', token.tokenId);
+console.log('Card:', token.card.brand, '****', token.card.last4);
+
+// Option 2: Confirm payment directly (tokenizes automatically)
+try {
+  const payment = await elements.confirmPayment({
+    returnUrl: 'https://yoursite.com/complete', // For 3DS
+    paymentMethodData: {
+      billingDetails: {
+        name: 'John Doe',
+        email: 'john@example.com',
+        address: {
+          line1: '123 Main St',
+          city: 'San Francisco',
+          state: 'CA',
+          postalCode: '94102',
+          country: 'US'
+        }
+      }
+    }
+  });
+
+  console.log('Payment successful:', payment.id);
+  window.location.href = '/success';
+} catch (error) {
+  console.error('Payment failed:', error.message);
+}`}
+            />
+          </div>
+
+          <div className="rounded-xl dashboard-card border border-white/10 p-6 space-y-6">
+            <h3 className="font-semibold text-white">Complete Hosted Fields Example</h3>
+
+            <CodeBlock title="React Component" language="tsx" code={`import { Atlas, ElementInstance } from '@atlas/sdk';
+import { useEffect, useRef, useState } from 'react';
+
+Atlas.init({ publishableKey: 'pk_test_xxx' });
+
+function CustomPaymentForm({ clientSecret }: { clientSecret: string }) {
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cardComplete, setCardComplete] = useState(false);
+  const elementsRef = useRef<any>(null);
+
+  useEffect(() => {
+    async function setupElements() {
+      const elements = await Atlas.elements({ clientSecret });
+      elementsRef.current = elements;
+
+      const cardNumber = elements.create('cardNumber', { showIcon: true });
+      const cardExpiry = elements.create('cardExpiry');
+      const cardCvc = elements.create('cardCvc');
+
+      // Track validation state
+      let numberComplete = false, expiryComplete = false, cvcComplete = false;
+      const updateComplete = () => setCardComplete(numberComplete && expiryComplete && cvcComplete);
+
+      cardNumber.on('change', (e) => { numberComplete = e.complete; updateComplete(); });
+      cardExpiry.on('change', (e) => { expiryComplete = e.complete; updateComplete(); });
+      cardCvc.on('change', (e) => { cvcComplete = e.complete; updateComplete(); });
+
+      cardNumber.mount('#card-number');
+      cardExpiry.mount('#card-expiry');
+      cardCvc.mount('#card-cvc');
+
+      setReady(true);
+    }
+
+    setupElements();
+  }, [clientSecret]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    try {
+      const payment = await elementsRef.current.confirmPayment();
+      window.location.href = '/success?id=' + payment.id;
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label>Card Number</label>
+        <div id="card-number" className="border rounded-lg p-3 h-12" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label>Expiry</label>
+          <div id="card-expiry" className="border rounded-lg p-3 h-12" />
+        </div>
+        <div>
+          <label>CVC</label>
+          <div id="card-cvc" className="border rounded-lg p-3 h-12" />
+        </div>
+      </div>
+      {error && <p className="text-red-500">{error}</p>}
+      <button
+        type="submit"
+        disabled={!ready || !cardComplete}
+        className="w-full bg-blue-600 text-white py-3 rounded-lg disabled:opacity-50"
+      >
+        Pay Now
+      </button>
+    </form>
+  );
+}`}
+            />
+          </div>
+
+          <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-4 flex items-start gap-3">
+            <Zap className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-blue-400">Drop-in vs Hosted Fields</h4>
+              <p className="text-sm text-slate-400 mt-1">
+                <strong>Drop-in</strong> (<code className="text-cyan-400">Atlas.mount()</code>): Pre-built payment form with all fields. Fastest integration.
+                <br />
+                <strong>Hosted Fields</strong> (<code className="text-cyan-400">Atlas.elements()</code>): Individual elements for custom layouts. Full design control.
+              </p>
             </div>
           </div>
 

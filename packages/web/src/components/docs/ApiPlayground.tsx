@@ -25,39 +25,113 @@ interface ApiPlaygroundProps {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.atlas.co/functions/v1'
 
 const ENDPOINTS = [
-  { method: 'POST', path: '/create-session', label: 'Create Session' },
-  { method: 'GET', path: '/get-session/:id', label: 'Get Session' },
-  { method: 'POST', path: '/confirm-payment/:id', label: 'Confirm Payment' },
-  { method: 'POST', path: '/capture-payment/:id', label: 'Capture Payment' },
-  { method: 'POST', path: '/refund-payment/:id', label: 'Refund Payment' },
-  { method: 'POST', path: '/customers', label: 'Create Customer' },
-  { method: 'GET', path: '/customers', label: 'List Customers' },
-  { method: 'POST', path: '/products', label: 'Create Product' },
-  { method: 'GET', path: '/products', label: 'List Products' },
-  { method: 'POST', path: '/prices', label: 'Create Price' },
-  { method: 'POST', path: '/subscriptions', label: 'Create Subscription' },
-  { method: 'POST', path: '/invoices', label: 'Create Invoice' },
-  { method: 'POST', path: '/bank-accounts', label: 'Create Bank Account' },
-  { method: 'GET', path: '/bank-accounts', label: 'List Bank Accounts' },
+  // Sessions & Payments
+  { method: 'POST', path: '/create-session', label: 'Create Session', category: 'Sessions' },
+  { method: 'GET', path: '/get-session/:id', label: 'Get Session', category: 'Sessions' },
+  { method: 'POST', path: '/get-session-config', label: 'Get Session Config', category: 'Sessions' },
+  { method: 'POST', path: '/confirm-payment', label: 'Confirm Payment', category: 'Payments' },
+  { method: 'POST', path: '/capture-payment/:id', label: 'Capture Payment', category: 'Payments' },
+  { method: 'POST', path: '/refund-payment/:id', label: 'Refund Payment', category: 'Payments' },
+  { method: 'GET', path: '/payments', label: 'List Payments', category: 'Payments' },
+  { method: 'GET', path: '/payments/:id', label: 'Get Payment', category: 'Payments' },
+
+  // Customers
+  { method: 'POST', path: '/customers', label: 'Create Customer', category: 'Customers' },
+  { method: 'GET', path: '/customers', label: 'List Customers', category: 'Customers' },
+  { method: 'GET', path: '/customers/:id', label: 'Get Customer', category: 'Customers' },
+  { method: 'PATCH', path: '/customers/:id', label: 'Update Customer', category: 'Customers' },
+  { method: 'DELETE', path: '/customers/:id', label: 'Delete Customer', category: 'Customers' },
+
+  // Products
+  { method: 'POST', path: '/products', label: 'Create Product', category: 'Products' },
+  { method: 'GET', path: '/products', label: 'List Products', category: 'Products' },
+  { method: 'GET', path: '/products/:id', label: 'Get Product', category: 'Products' },
+  { method: 'PATCH', path: '/products/:id', label: 'Update Product', category: 'Products' },
+  { method: 'DELETE', path: '/products/:id', label: 'Delete Product', category: 'Products' },
+
+  // Prices
+  { method: 'POST', path: '/prices', label: 'Create Price', category: 'Prices' },
+  { method: 'GET', path: '/prices', label: 'List Prices', category: 'Prices' },
+  { method: 'GET', path: '/prices/:id', label: 'Get Price', category: 'Prices' },
+  { method: 'PATCH', path: '/prices/:id', label: 'Update Price', category: 'Prices' },
+
+  // Subscriptions
+  { method: 'POST', path: '/subscriptions', label: 'Create Subscription', category: 'Subscriptions' },
+  { method: 'GET', path: '/subscriptions', label: 'List Subscriptions', category: 'Subscriptions' },
+  { method: 'GET', path: '/subscriptions/:id', label: 'Get Subscription', category: 'Subscriptions' },
+  { method: 'PATCH', path: '/subscriptions/:id', label: 'Update Subscription', category: 'Subscriptions' },
+  { method: 'DELETE', path: '/subscriptions/:id', label: 'Cancel Subscription', category: 'Subscriptions' },
+
+  // Invoices
+  { method: 'POST', path: '/invoices', label: 'Create Invoice', category: 'Invoices' },
+  { method: 'GET', path: '/invoices', label: 'List Invoices', category: 'Invoices' },
+  { method: 'GET', path: '/invoices/:id', label: 'Get Invoice', category: 'Invoices' },
+  { method: 'POST', path: '/invoices/:id/finalize', label: 'Finalize Invoice', category: 'Invoices' },
+  { method: 'POST', path: '/invoices/:id/pay', label: 'Pay Invoice', category: 'Invoices' },
+  { method: 'POST', path: '/invoices/:id/void', label: 'Void Invoice', category: 'Invoices' },
+
+  // Bank Accounts / ACH
+  { method: 'POST', path: '/bank-accounts', label: 'Create Bank Account', category: 'Bank Accounts' },
+  { method: 'GET', path: '/bank-accounts', label: 'List Bank Accounts', category: 'Bank Accounts' },
+  { method: 'GET', path: '/bank-accounts/:id', label: 'Get Bank Account', category: 'Bank Accounts' },
+  { method: 'POST', path: '/bank-accounts/:id/verify', label: 'Verify Bank Account', category: 'Bank Accounts' },
+  { method: 'DELETE', path: '/bank-accounts/:id', label: 'Delete Bank Account', category: 'Bank Accounts' },
+
+  // Webhooks
+  { method: 'POST', path: '/webhook-endpoints', label: 'Create Webhook', category: 'Webhooks' },
+  { method: 'GET', path: '/webhook-endpoints', label: 'List Webhooks', category: 'Webhooks' },
+  { method: 'GET', path: '/webhook-endpoints/:id', label: 'Get Webhook', category: 'Webhooks' },
+  { method: 'PATCH', path: '/webhook-endpoints/:id', label: 'Update Webhook', category: 'Webhooks' },
+  { method: 'DELETE', path: '/webhook-endpoints/:id', label: 'Delete Webhook', category: 'Webhooks' },
 ]
 
 const DEFAULT_BODIES: Record<string, object> = {
+  // Sessions
   '/create-session': {
     amount: 4990,
     currency: 'USD',
     customer: { email: 'test@example.com', name: 'Test User' },
     metadata: { order_id: 'order_123' }
   },
+  '/get-session-config': {},
+
+  // Payments
+  '/confirm-payment': {
+    session_id: 'sess_xxx',
+    token_id: 'tok_xxx'
+  },
+  '/capture-payment/:id': {
+    amount: 4990 // Optional: partial capture
+  },
+  '/refund-payment/:id': {
+    amount: 2000, // Optional: partial refund
+    reason: 'customer_request'
+  },
+
+  // Customers
   '/customers': {
     email: 'customer@example.com',
     name: 'John Doe',
     metadata: { source: 'api_playground' }
   },
+  '/customers/:id': {
+    name: 'John Doe Updated',
+    email: 'updated@example.com',
+    metadata: { notes: 'Updated via API' }
+  },
+
+  // Products
   '/products': {
     name: 'Test Product',
     description: 'A test product',
     metadata: { tier: 'basic' }
   },
+  '/products/:id': {
+    name: 'Updated Product Name',
+    description: 'Updated description'
+  },
+
+  // Prices
   '/prices': {
     product: 'prod_xxx',
     currency: 'usd',
@@ -65,16 +139,56 @@ const DEFAULT_BODIES: Record<string, object> = {
     type: 'recurring',
     recurring: { interval: 'month' }
   },
+  '/prices/:id': {
+    active: false,
+    nickname: 'Updated Price'
+  },
+
+  // Subscriptions
   '/subscriptions': {
     customer: 'cus_xxx',
     items: [{ price: 'price_xxx', quantity: 1 }],
     trial_period_days: 14
   },
+  '/subscriptions/:id': {
+    items: [{ price: 'price_xxx', quantity: 2 }],
+    proration_behavior: 'create_prorations'
+  },
+
+  // Invoices
   '/invoices': {
     customer: 'cus_xxx',
     collection_method: 'send_invoice',
     days_until_due: 30
   },
+  '/invoices/:id/finalize': {},
+  '/invoices/:id/pay': {
+    payment_method: 'pm_xxx' // Optional
+  },
+  '/invoices/:id/void': {},
+
+  // Bank Accounts
+  '/bank-accounts': {
+    customer: 'cus_xxx',
+    account_holder_name: 'John Doe',
+    account_holder_type: 'individual',
+    routing_number: '110000000',
+    account_number: '000123456789'
+  },
+  '/bank-accounts/:id/verify': {
+    amounts: [32, 45] // Micro-deposit amounts
+  },
+
+  // Webhooks
+  '/webhook-endpoints': {
+    url: 'https://yoursite.com/webhooks/atlas',
+    enabled_events: ['payment.captured', 'payment.failed', 'subscription.created', 'invoice.paid'],
+    description: 'Production webhook'
+  },
+  '/webhook-endpoints/:id': {
+    enabled_events: ['payment.captured', 'payment.failed'],
+    disabled: false
+  }
 }
 
 export function ApiPlayground({ isOpen, onClose, initialEndpoint, initialMethod, initialBody }: ApiPlaygroundProps) {
@@ -170,7 +284,11 @@ export function ApiPlayground({ isOpen, onClose, initialEndpoint, initialMethod,
 
       setResponse({ status: res.status, data, duration })
     } catch (err: any) {
-      setError(err.message || 'Request failed')
+      if (err.message === 'Failed to fetch') {
+        setError('Failed to fetch - check that the API is running and CORS is configured. You may need to refresh the page.')
+      } else {
+        setError(err.message || 'Request failed')
+      }
     } finally {
       setLoading(false)
     }
@@ -274,20 +392,28 @@ export function ApiPlayground({ isOpen, onClose, initialEndpoint, initialMethod,
               <SelectTrigger className="bg-obsidian border-white/10 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-charcoal border-white/10">
-                {ENDPOINTS.map((ep) => (
-                  <SelectItem
-                    key={`${ep.method}-${ep.path}`}
-                    value={`${ep.method}:${ep.path}`}
-                    className="text-white hover:bg-white/5 focus:bg-white/5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${methodColors[ep.method]} text-[10px] px-1.5 py-0`}>
-                        {ep.method}
-                      </Badge>
-                      <span className="font-mono text-xs">{ep.path}</span>
+              <SelectContent className="bg-charcoal border-white/10 max-h-[400px]">
+                {/* Group endpoints by category */}
+                {Array.from(new Set(ENDPOINTS.map(e => e.category))).map((category) => (
+                  <div key={category}>
+                    <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                      {category}
                     </div>
-                  </SelectItem>
+                    {ENDPOINTS.filter(ep => ep.category === category).map((ep) => (
+                      <SelectItem
+                        key={`${ep.method}-${ep.path}`}
+                        value={`${ep.method}:${ep.path}`}
+                        className="text-white hover:bg-white/5 focus:bg-white/5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Badge className={`${methodColors[ep.method]} text-[10px] px-1.5 py-0`}>
+                            {ep.method}
+                          </Badge>
+                          <span className="font-mono text-xs">{ep.path}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </div>
                 ))}
               </SelectContent>
             </Select>

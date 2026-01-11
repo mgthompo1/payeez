@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - 2026-01-10
+
+### Breaking Changes
+
+#### SDK v2.0 - New Initialization Pattern
+- **`Atlas.configure()` → `Atlas.init()`**: New method name for initialization
+- **`apiKey` → `publishableKey`**: Renamed for clarity (client-side key pattern)
+- SDK now calls Atlas API directly instead of proxying through merchant's server
+
+### Added
+
+#### Hosted Fields SDK Support (`@atlas/sdk`)
+- **`Atlas.elements(options)`**: Create ElementsInstance for custom payment forms
+- **Individual Element Creation**:
+  - `elements.create('cardNumber', options)` - Card number with brand detection
+  - `elements.create('cardExpiry', options)` - Expiration date input
+  - `elements.create('cardCvc', options)` - CVC/CVV input
+  - `elements.create('cardHolder', options)` - Cardholder name
+- **Element Instance Methods**:
+  - `element.mount(elementId)` - Mount to DOM element
+  - `element.unmount()` - Remove from DOM
+  - `element.focus()` / `element.blur()` - Focus control
+  - `element.clear()` - Clear input value
+  - `element.update(options)` - Update configuration
+  - `element.on(event, handler)` - Event subscription
+- **Elements Instance Methods**:
+  - `elements.createToken()` - Tokenize card data
+  - `elements.confirmPayment(options)` - Confirm payment directly
+
+#### Hosted Fields Documentation
+- Complete guide for custom payment form integration
+- Element types reference (cardNumber, cardExpiry, cardCvc, cardHolder)
+- Event handling examples (ready, change, focus, blur, error)
+- Element methods reference table
+- Full React component example with validation state tracking
+- Drop-in vs Hosted Fields comparison callout
+
+#### API Playground Enhancements
+- **Expanded to 45+ endpoints** (was 14):
+  - Sessions: create-session, get-session, get-session-config
+  - Payments: confirm, capture, refund, list, get
+  - Customers: CRUD operations
+  - Products: CRUD operations
+  - Prices: create, list, get, update
+  - Subscriptions: CRUD + cancel
+  - Invoices: create, list, get, finalize, pay, void
+  - Bank Accounts: create, list, get, verify, delete
+  - Webhooks: CRUD operations
+- **Grouped by Category**: Endpoints organized into logical groups
+- **Default Request Bodies**: Pre-populated examples for all POST/PATCH endpoints
+- **Scrollable Dropdown**: Max height for better UX with many endpoints
+
+#### Public Documentation Route
+- Created `/docs` route for public-facing API documentation
+- Public header with Sign In/Get Started buttons
+- Synced with dashboard docs content
+
+### Changed
+
+#### Dashboard Performance
+- Added loading skeletons for all 14 dashboard pages
+- Next.js optimizations: `optimizePackageImports` for lucide-react, radix-ui, recharts
+- Image optimization with AVIF/WebP and 30-day cache
+- Compression enabled
+
+### Fixed
+
+- API Playground "Failed to fetch" error - now uses correct Supabase functions URL
+- Duplicate key warning in endpoint selector - changed to `${method}-${path}` keys
+
+---
+
 ## [1.3.0] - 2026-01-10
 
 ### Added
