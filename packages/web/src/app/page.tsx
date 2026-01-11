@@ -91,7 +91,7 @@ export default function HomePage() {
             <span className="font-mono text-sm tracking-tight text-white/80">Atlas</span>
           </div>
           <div className="hidden md:flex gap-8 text-xs font-medium text-white/50 tracking-wide uppercase">
-            <Link href="/dashboard/docs" className="hover:text-cyan-400 transition">Docs</Link>
+            <Link href="/docs" className="hover:text-cyan-400 transition">Docs</Link>
             <Link href="/pricing" className="hover:text-cyan-400 transition">Pricing</Link>
             <Link href="/security" className="hover:text-cyan-400 transition">Security</Link>
             <Link href="/status" className="hover:text-cyan-400 transition">Status</Link>
@@ -332,7 +332,7 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-white mb-3">Product</h4>
               <div className="space-y-2 text-sm text-white/60">
-                <Link href="/dashboard/docs" className="hover:text-cyan-400 transition-colors block">Documentation</Link>
+                <Link href="/docs" className="hover:text-cyan-400 transition-colors block">Documentation</Link>
                 <Link href="/pricing" className="hover:text-cyan-400 transition-colors block">Pricing</Link>
                 <Link href="/changelog" className="hover:text-cyan-400 transition-colors block">Changelog</Link>
               </div>

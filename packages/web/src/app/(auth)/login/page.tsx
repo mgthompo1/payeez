@@ -8,16 +8,36 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, ArrowRight } from 'lucide-react'
+import { Loader2, ArrowRight, Github } from 'lucide-react'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('invite')
+  const authError = searchParams.get('error')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(authError === 'auth_failed' ? 'Authentication failed. Please try again.' : null)
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
+
+  const handleGitHubLogin = async () => {
+    setOauthLoading(true)
+    setError(null)
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback${inviteToken ? `?next=/invite/${inviteToken}` : ''}`,
+      },
+    })
+
+    if (error) {
+      setError(error.message)
+      setOauthLoading(false)
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,7 +107,7 @@ function LoginForm() {
 
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || oauthLoading}
           className="w-full h-12 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium transition-all duration-300 shadow-[0_0_20px_-5px_rgba(6,182,212,0.5)]"
         >
           {loading ? (
@@ -101,6 +121,30 @@ function LoginForm() {
               <ArrowRight className="h-4 w-4 ml-2" />
             </>
           )}
+        </Button>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-charcoal text-slate-500">or continue with</span>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleGitHubLogin}
+          disabled={loading || oauthLoading}
+          className="w-full h-12 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20 transition-all"
+        >
+          {oauthLoading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Github className="h-5 w-5 mr-2" />
+          )}
+          GitHub
         </Button>
       </form>
 

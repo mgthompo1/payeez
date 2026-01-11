@@ -80,8 +80,15 @@ const DEFAULT_BODIES: Record<string, object> = {
 export function ApiPlayground({ isOpen, onClose, initialEndpoint, initialMethod, initialBody }: ApiPlaygroundProps) {
   const [apiKey, setApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
-  const [selectedEndpoint, setSelectedEndpoint] = useState(initialEndpoint || '/create-session')
-  const [method, setMethod] = useState<string>(initialMethod || 'POST')
+  // Store combined method:path for unique selection
+  const [selectedValue, setSelectedValue] = useState(() => {
+    const m = initialMethod || 'POST'
+    const p = initialEndpoint || '/create-session'
+    return `${m}:${p}`
+  })
+
+  // Derived values from selectedValue
+  const [method, selectedEndpoint] = selectedValue.split(':') as [string, string]
   const [body, setBody] = useState('')
   const [pathParams, setPathParams] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -97,13 +104,7 @@ export function ApiPlayground({ isOpen, onClose, initialEndpoint, initialMethod,
       const defaultBody = DEFAULT_BODIES[selectedEndpoint]
       setBody(defaultBody ? JSON.stringify(defaultBody, null, 2) : '{}')
     }
-
-    // Find the method for this endpoint
-    const endpoint = ENDPOINTS.find(e => e.path === selectedEndpoint)
-    if (endpoint) {
-      setMethod(endpoint.method)
-    }
-  }, [selectedEndpoint, initialBody])
+  }, [selectedValue, initialBody, selectedEndpoint])
 
   // Check if endpoint has path parameters
   const hasPathParams = selectedEndpoint.includes(':')
@@ -269,15 +270,15 @@ export function ApiPlayground({ isOpen, onClose, initialEndpoint, initialMethod,
           {/* Endpoint Selector */}
           <div className="space-y-2">
             <Label className="text-slate-300 text-xs">Endpoint</Label>
-            <Select value={selectedEndpoint} onValueChange={setSelectedEndpoint}>
+            <Select value={selectedValue} onValueChange={setSelectedValue}>
               <SelectTrigger className="bg-obsidian border-white/10 text-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-charcoal border-white/10">
                 {ENDPOINTS.map((ep) => (
                   <SelectItem
-                    key={ep.path}
-                    value={ep.path}
+                    key={`${ep.method}-${ep.path}`}
+                    value={`${ep.method}:${ep.path}`}
                     className="text-white hover:bg-white/5 focus:bg-white/5"
                   >
                     <div className="flex items-center gap-2">
